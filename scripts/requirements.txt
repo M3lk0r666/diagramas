@@ -1,0 +1,14 @@
+# Dependencias para topology_generator.py
+# Instalar con:
+#   pip install -r scripts/requirements.txt
+#
+# En Windows (XAMPP):
+#   py -m pip install -r scripts/requirements.txt
+#
+# En Linux/Mac:
+#   pip3 install -r scripts/requirements.txt
+
+networkx>=3.1
+matplotlib>=3.7
+pillow>=10.0
+scipy>=1.10

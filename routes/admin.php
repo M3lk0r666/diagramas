@@ -1,0 +1,101 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\Admin\FileUploadController;
+use App\Http\Controllers\Admin\SwitchController;
+use App\Http\Controllers\Admin\ConnectionController;
+use App\Http\Controllers\Admin\ClientController;
+use App\Http\Controllers\Admin\CustomTopologyController;
+use App\Http\Controllers\Admin\GoJsTopologyController;
+use App\Http\Controllers\Admin\AreaTopologyController;
+use App\Http\Controllers\Admin\InventarioController;
+use App\Http\Controllers\Admin\ClientManagerController;
+use App\Http\Controllers\Admin\DiagramAssemblerController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\IsoTopologyController;
+
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+// Inventario central
+Route::get('/inventario', [InventarioController::class, 'index'])->name('inventario.index');
+
+// Gestión de clientes (áreas + switches)
+Route::get('/clientes-manager', [ClientManagerController::class, 'index'])->name('clients.manage.index');
+Route::get('/clientes-manager/{client}', [ClientManagerController::class, 'show'])->name('clients.manage.show');
+Route::get('/clientes-manager/{client}/batches/{batch}', [ClientManagerController::class, 'batchShow'])    ->name('clients.manage.batch');
+Route::delete('/clientes-manager/{client}/batches/{batch}', [ClientManagerController::class, 'destroyBatch']) ->name('clients.manage.batch.destroy');
+Route::delete('/clientes-manager/{client}/batches/{batch}/switches/{switch}', [ClientManagerController::class, 'destroySwitch'])->name('clients.manage.switch.destroy');
+
+// Carga de archivos
+Route::get('/', [FileUploadController::class, 'index'])->name('home');
+Route::post('/upload', [FileUploadController::class, 'store'])->name('upload.store');
+Route::get('/batches/{batch}', [FileUploadController::class, 'show'])->name('batches.show');
+Route::get('/batches/{batch}/status', [FileUploadController::class, 'status'])->name('batches.status');
+
+// Switches
+Route::get('/switches', [SwitchController::class, 'index'])->name('switches.index');
+Route::get('/switches/{switch}', [SwitchController::class, 'show'])->name('switches.show');
+Route::get('/switches/{switch}/ports-diagram', [SwitchController::class, 'portsDiagram'])->name('switches.ports-diagram');
+Route::get('/switches/{switch}/config', [SwitchController::class, 'downloadConfig'])->name('switches.config.download');
+Route::delete('/switches/{switch}', [SwitchController::class, 'destroy'])->name('switches.destroy');
+Route::post('/switches/{switch}/diagram/generate', [SwitchController::class, 'generateSwitchDiagram'])->name('switches.diagram.generate');
+Route::get('/switches/{switch}/diagram/image', [SwitchController::class, 'switchDiagramImage'])->name('switches.diagram.image');
+
+// Clientes
+Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+Route::post('/clients', [ClientController::class, 'store'])->name('clients.store');
+Route::get('/clients/{client}', [ClientController::class, 'show'])->name('clients.show');
+Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
+Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+
+// Topología general
+Route::get('/topology', [ConnectionController::class, 'index'])->name('topology.index');
+Route::get('/topology/full', [ConnectionController::class, 'full'])->name('topology.full');
+Route::get('/topology/icons/{filename}', [ConnectionController::class, 'serveIcon'])->name('topology.icon');
+
+// Topología personalizada
+Route::get('/topology/custom/create', [CustomTopologyController::class, 'create'])->name('topology.custom.create');
+Route::post('/topology/custom/build', [CustomTopologyController::class, 'build'])->name('topology.custom.build');
+Route::get('/topology/custom', [CustomTopologyController::class, 'show'])->name('topology.custom.show');
+Route::post('/topology/custom/generate', [CustomTopologyController::class, 'generate'])->name('topology.custom.generate');
+Route::get('/topology/custom/image/{key}', [CustomTopologyController::class, 'image'])->name('topology.custom.image');
+
+// Topología GoJS
+Route::get('/topology/gojs/create', [GoJsTopologyController::class, 'create'])->name('topology.gojs.create');
+Route::get('/topology/gojs/blank', [GoJsTopologyController::class, 'blank'])->name('topology.gojs.blank');
+Route::post('/topology/gojs/build', [GoJsTopologyController::class, 'build'])->name('topology.gojs.build');
+Route::get('/topology/gojs', [GoJsTopologyController::class, 'show'])->name('topology.gojs.show');
+Route::post('/topology/gojs/export', [GoJsTopologyController::class, 'export'])->name('topology.gojs.export');
+Route::get('/topology/gojs/image/{key}', [GoJsTopologyController::class, 'image'])->name('topology.gojs.image');
+
+// Topología por Áreas
+Route::get('/areas', [AreaTopologyController::class, 'index'])->name('areas.index');
+Route::get('/areas/clients/{client}', [AreaTopologyController::class, 'areas'])->name('areas.client');
+Route::get('/areas/clients/{client}/batches/{batch}', [AreaTopologyController::class, 'show'])->name('areas.show');
+Route::get('/areas/clients/{client}/batches/{batch}/topology', [AreaTopologyController::class, 'topology'])->name('areas.topology');
+Route::get('/areas/clients/{client}/global', [AreaTopologyController::class, 'global'])->name('areas.global');
+Route::post('/areas/clients/{client}/rebuild-connections', [AreaTopologyController::class, 'rebuildConnections'])->name('areas.rebuild-connections');
+
+// Ensamblador de Diagramas Global
+Route::get('/assembler', [DiagramAssemblerController::class, 'index'])->name('assembler.index');
+Route::get('/assembler/create', [DiagramAssemblerController::class, 'create'])->name('assembler.create');
+Route::post('/assembler', [DiagramAssemblerController::class, 'store'])->name('assembler.store');
+Route::get('/assembler/{project}', [DiagramAssemblerController::class, 'edit'])->name('assembler.edit');
+Route::put('/assembler/{project}', [DiagramAssemblerController::class, 'update'])->name('assembler.update');
+Route::delete('/assembler/{project}', [DiagramAssemblerController::class, 'destroy'])->name('assembler.destroy');
+Route::post('/assembler/{project}/export', [DiagramAssemblerController::class, 'export'])->name('assembler.export');
+Route::get('/assembler/{project}/library', [DiagramAssemblerController::class, 'library'])->name('assembler.library');
+Route::post('/assembler/{project}/autolayout', [DiagramAssemblerController::class, 'autolayout'])->name('assembler.autolayout');
+Route::get('/assembler/{project}/vectorial', [DiagramAssemblerController::class, 'vectorialEditor'])->name('assembler.vectorial');
+Route::get('/assembler/{project}/graph', [DiagramAssemblerController::class, 'graph'])->name('assembler.graph');
+
+// Vista Isométrica 3D
+Route::get('/iso/{client}', [IsoTopologyController::class, 'global'])->name('iso.global');
+Route::get('/iso/{client}/{batch}', [IsoTopologyController::class, 'area'])->name('iso.area');
+
+// Diagrama exportado (PNG)
+Route::get('/batches/{batch}/diagram', [FileUploadController::class, 'diagram'])->name('batches.diagram');
+Route::get('/batches/{batch}/diagram/image', [FileUploadController::class, 'diagramImage'])->name('batches.diagram.image');
+Route::post('/batches/{batch}/diagram/regenerate', [FileUploadController::class, 'regenerateDiagram'])->name('batches.diagram.regenerate');
+Route::get('/batches/{batch}/diagram/clusters/{filename}', [FileUploadController::class, 'clusterImage'])->name('batches.diagram.cluster.image');
