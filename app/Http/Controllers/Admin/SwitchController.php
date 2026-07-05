@@ -68,10 +68,39 @@ class SwitchController extends Controller
             ->get(['sys_name', 'system_type', 'management_ip', 'is_stacked'])
             ->keyBy('sys_name');
 
+        // Helper: determina el icono de dispositivo según palabras clave en display_string.
+        // Para vecinos no registrados en BD (endpoints, servidores, APs, etc.)
+        $deviceIcon = function (string $desc): string {
+            $d = strtolower($desc);
+            if (str_contains($d, 'router'))                                                    return 'router.png';
+            if (str_contains($d, 'firewall'))                                                  return 'firewall.png';
+            if (str_contains($d, 'wireless_controler') || str_contains($d, 'wireless'))        return 'wireless_controler.png';
+            if (str_contains($d, 'acces_point') || str_contains($d, 'access_point') || preg_match('/\bap\b/', $d))
+                                                                                               return 'acces_point.png';
+            if (str_contains($d, 'modem'))                                                     return 'modem.png';
+            if (str_contains($d, 'server_torre') || str_contains($d, 'server torre'))         return 'server_torre.png';
+            if (str_contains($d, 'server_rack') || str_contains($d, 'server rack') || str_contains($d, 'server'))
+                                                                                               return 'server_rack.png';
+            if (str_contains($d, 'storage'))                                                   return 'storage.png';
+            if (str_contains($d, 'internet'))                                                  return 'internet.png';
+            if (str_contains($d, 'network_cloud') || str_contains($d, 'cloud'))               return 'network_cloud.png';
+            if (str_contains($d, 'pc_desktop') || str_contains($d, 'desktop') || preg_match('/\bpc\b/', $d))
+                                                                                               return 'pc_desktop.png';
+            if (str_contains($d, 'laptop') || str_contains($d, 'notebook'))                   return 'laptop.png';
+            if (str_contains($d, 'ip_phone') || str_contains($d, 'phone') || str_contains($d, 'voip'))
+                                                                                               return 'ip_phone.png';
+            if (str_contains($d, 'printer') || str_contains($d, 'impresora'))                 return 'printer.png';
+            if (str_contains($d, 'security_camera') || str_contains($d, 'camera') || str_contains($d, 'camara'))
+                                                                                               return 'security_camera.png';
+            if (str_contains($d, 'vpn_conection') || str_contains($d, 'vpn'))                 return 'vpn_conection.png';
+            if (str_contains($d, 'load_balancer') || preg_match('/\blb\b/', $d))              return 'load_balancer.png';
+            return 'access_switch.png';
+        };
+
         // Helper unificado: devuelve todos los datos visuales de un vecino documentado.
         // inDb=true  → borde verde, icono según rol
-        // inDb=false → borde rojo, icono genérico access
-        $neighborData = function (string $desc) use ($knownSwitches, $iconFileMap): array {
+        // inDb=false → borde naranja, icono según tipo de dispositivo detectado
+        $neighborData = function (string $desc) use ($knownSwitches, $iconFileMap, $deviceIcon): array {
             $match = $knownSwitches->first(fn($s) =>
                 $s->sys_name && str_contains(strtolower($desc), strtolower($s->sys_name))
             ) ?? $knownSwitches->get($desc);
@@ -96,12 +125,12 @@ class SwitchController extends Controller
 
             return [
                 'inDb'  => false,
-                'icon'  => route('admin.topology.icon', 'access_switch.png'),
+                'icon'  => route('admin.topology.icon', $deviceIcon($desc)),
                 'model' => null,
                 'ip'    => null,
-                'borderColor'    => '#DC2626',   // rojo  → no en BD
-                'highlightColor' => '#B91C1C',
-                'fontColor'      => '#7F1D1D',
+                'borderColor'    => '#EA580C',   // naranja → no en BD, dispositivo final
+                'highlightColor' => '#C2410C',
+                'fontColor'      => '#7C2D12',
             ];
         };
 

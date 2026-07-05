@@ -166,6 +166,23 @@
     </script>
     @include('admin.iso._scene')
     <script>
+    // ── Altura dinámica del wrapper ───────────────────────────────────────────────
+    // La capa de la plantilla admin añade un flex-row con mt-40 antes del slot,
+    // lo que puede desplazar el wrapper hacia abajo y hacer que calc(100vh-56px)
+    // desborde o quede corto. Recalculamos la altura según la posición real del wrapper.
+    (function fixWrapperHeight() {
+        function setHeight() {
+            const el = document.getElementById('iso-wrapper');
+            if (!el) return;
+            const top = el.getBoundingClientRect().top + window.scrollY;
+            el.style.height = (window.innerHeight - el.getBoundingClientRect().top) + 'px';
+        }
+        // Run immediately (in case layout is already done) and on load to be safe
+        setHeight();
+        window.addEventListener('load', setHeight);
+        window.addEventListener('resize', setHeight);
+    })();
+
     // Modo pantalla completa: ?fullscreen=1 oculta sidebar y ajusta márgenes
     (function () {
         if (new URLSearchParams(window.location.search).get('fullscreen') !== '1') return;

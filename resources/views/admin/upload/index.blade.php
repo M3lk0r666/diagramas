@@ -4,24 +4,24 @@
         'href' => route('dashboard'),
     ],
     [
-        'name' => 'Archivos Procesados',
+        'name' => 'Carga de Archivos',
     ],
 ]">
 
-    <x-slot name="action">
-        <x-wire-button blue href="#">
-            <i class="ri-add-large-line"></i>
-            Nuevo
-        </x-wire-button>
-    </x-slot>
 
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl">Análisis de Switches</h2>
-    </x-slot>
+    <div class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <h1 class="text-xl font-semibold text-blue-900">
+            Subir (Uploads) de Archivos de Configuración
+        </h1>
+        <p class="mt-2 text-sm text-blue-700">
+            Desde esta sección puedes subir múltiples archivos <strong>.txt</strong> con información de backups.
+            Una vez cargados, se habilitara el boton de <strong>Iniciar Procesamiento</strong> el cual procesará cada
+            archivo automáticamente.
+        </p>
+    </div>
 
     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
         <div class="max-w-4xl mx-auto py-8 px-4">
-
             {{-- Drop zone --}}
             <div id="drop-zone"
                 class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:border-blue-400 transition-colors"
@@ -44,13 +44,11 @@
 
                 {{-- Selector de modo: nuevo lote vs. lote existente --}}
                 <div class="mt-6 flex gap-3">
-                    <button type="button" id="btn-mode-new"
-                        onclick="resetForm()"
+                    <button type="button" id="btn-mode-new" onclick="resetForm()"
                         class="flex-1 py-2 px-4 rounded-lg border-2 border-blue-600 bg-blue-600 text-white text-sm font-medium transition">
                         + Nuevo diagrama
                     </button>
-                    <button type="button" id="btn-mode-existing"
-                        onclick="setMode('existing')"
+                    <button type="button" id="btn-mode-existing" onclick="setMode('existing')"
                         class="flex-1 py-2 px-4 rounded-lg border-2 border-gray-300 text-gray-600 text-sm font-medium hover:border-blue-400 hover:text-blue-600 transition">
                         Agregar a diagrama existente
                     </button>
@@ -60,25 +58,29 @@
                 <div id="panel-new" class="space-y-4 mt-4">
                     {{-- Cliente --}}
                     <div>
-                        <label for="client-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="client-select"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Cliente <span class="text-gray-400 font-normal">(opcional)</span>
                         </label>
                         <select id="client-select" name="client_id"
                             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
                             <option value="">— Sin cliente —</option>
                             @foreach ($clients as $client)
-                                <option value="{{ $client->id }}" {{ old('client_id') == $client->id ? 'selected' : '' }}>
+                                <option value="{{ $client->id }}"
+                                    {{ old('client_id') == $client->id ? 'selected' : '' }}>
                                     {{ $client->name }}
                                 </option>
                             @endforeach
                         </select>
                         <p class="mt-1 text-xs text-gray-400">
-                            ¿No existe el cliente? <a href="{{ route('admin.clients.index') }}" class="text-blue-600 hover:underline">Créalo aquí</a>.
+                            ¿No existe el cliente? <a href="{{ route('admin.clients.index') }}"
+                                class="text-blue-600 hover:underline">Créalo aquí</a>.
                         </p>
                     </div>
                     {{-- Nombre del diagrama --}}
                     <div>
-                        <label for="diagram-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        <label for="diagram-name"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Nombre del diagrama <span class="text-gray-400 font-normal">(opcional)</span>
                         </label>
                         <input id="diagram-name" name="name" type="text" maxlength="120"
@@ -124,6 +126,17 @@
                 </button>
             </form>
 
+            <div class="mt-6 mb-6 rounded-lg border border-orange-200 bg-orange-50 p-4">
+                <h1 class="text-xl font-semibold text-blue-900">
+                    Lotes Procesados
+                </h1>
+                <p class="mt-2 text-sm text-blue-700">
+                    En esta sección apareceran los lotes procesados, y en caso de querer acceder a uno de estos,
+                    bastará
+                    con dar clic sobre el lote deseado y se mostrará el listado de Archivos Procesados
+                </p>
+            </div>
+
             {{-- Lotes recientes --}}
             @if ($recentBatches->count())
                 <div class="mt-10">
@@ -162,10 +175,12 @@
                 document.getElementById('panel-existing').classList.toggle('hidden', isNew);
                 document.getElementById('btn-mode-new').className =
                     'flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition ' +
-                    (isNew ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600');
+                    (isNew ? 'border-blue-600 bg-blue-600 text-white' :
+                        'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600');
                 document.getElementById('btn-mode-existing').className =
                     'flex-1 py-2 px-4 rounded-lg border-2 text-sm font-medium transition ' +
-                    (!isNew ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600');
+                    (!isNew ? 'border-blue-600 bg-blue-600 text-white' :
+                        'border-gray-300 text-gray-600 hover:border-blue-400 hover:text-blue-600');
             }
 
             // ── Limpiar todo el formulario ────────────────────────────
@@ -180,9 +195,9 @@
                 btn.classList.add('hidden');
 
                 // Resetear campos de texto y selects
-                document.getElementById('client-select').value   = '';
-                document.getElementById('diagram-name').value    = '';
-                document.getElementById('existing-batch').value  = '';
+                document.getElementById('client-select').value = '';
+                document.getElementById('diagram-name').value = '';
+                document.getElementById('existing-batch').value = '';
 
                 // Resetear drop zone (quitar highlight si lo hubiera)
                 dropZone.classList.remove('border-blue-400');

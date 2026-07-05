@@ -1,7 +1,4 @@
-<x-admin-layout title="Clientes | Diagramas" :breadcrumbs="[
-    ['name' => 'Dashboard', 'href' => route('dashboard')],
-    ['name' => 'Clientes'],
-]">
+<x-admin-layout title="Clientes | Diagramas" :breadcrumbs="[['name' => 'Dashboard', 'href' => route('dashboard')], ['name' => 'Clientes']]">
     <x-slot name="header">
         <h2 class="font-semibold text-xl">Clientes</h2>
     </x-slot>
@@ -22,8 +19,8 @@
                 <div class="flex-1 min-w-48">
                     <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nombre *</label>
                     <input type="text" name="name" value="{{ old('name') }}" required maxlength="120"
-                           placeholder="Ej: Empresa ABC"
-                           class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
+                        placeholder="Ej: Empresa ABC"
+                        class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
                     @error('name')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
@@ -31,8 +28,8 @@
                 <div class="flex-1 min-w-48">
                     <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Descripción</label>
                     <input type="text" name="description" value="{{ old('description') }}" maxlength="255"
-                           placeholder="Opcional"
-                           class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
+                        placeholder="Opcional"
+                        class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <button type="submit"
                     class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
@@ -58,11 +55,12 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                             <td class="px-4 py-3 font-semibold">
                                 <a href="{{ route('admin.clients.show', $client) }}"
-                                   class="text-blue-600 hover:underline">{{ $client->name }}</a>
+                                    class="text-blue-600 hover:underline">{{ $client->name }}</a>
                             </td>
                             <td class="px-4 py-3 text-gray-500 text-xs">{{ $client->description ?? '—' }}</td>
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-block bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                                <span
+                                    class="inline-block bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded-full">
                                     {{ $client->batches_count }}
                                 </span>
                             </td>
@@ -72,13 +70,14 @@
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-2">
                                     {{-- Editar nombre --}}
-                                    <button onclick="openEdit({{ $client->id }}, '{{ addslashes($client->name) }}', '{{ addslashes($client->description ?? '') }}')"
-                                        class="text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50 transition">
+                                    <button
+                                        onclick="openEdit({{ $client->id }}, '{{ addslashes($client->name) }}', '{{ addslashes($client->description ?? '') }}')"
+                                        class="text-xs text-gray-500 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition">
                                         Editar
                                     </button>
                                     {{-- Eliminar --}}
                                     <form method="POST" action="{{ route('admin.clients.destroy', $client) }}"
-                                          onsubmit="return confirm('¿Eliminar cliente {{ addslashes($client->name) }}? Los diagramas asociados quedarán sin cliente.')">
+                                        onsubmit="return confirm('¿Eliminar cliente {{ addslashes($client->name) }}? Los diagramas asociados quedarán sin cliente.')">
                                         @csrf @method('DELETE')
                                         <button type="submit"
                                             class="text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 transition">
@@ -111,12 +110,12 @@
                     <div>
                         <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Nombre *</label>
                         <input type="text" id="edit-name" name="name" required maxlength="120"
-                               class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <div>
                         <label class="text-xs text-gray-500 uppercase tracking-wide block mb-1">Descripción</label>
                         <input type="text" id="edit-description" name="description" maxlength="255"
-                               class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
                 <div class="flex justify-end gap-3 mt-5">
@@ -135,7 +134,7 @@
 
     @push('js')
         <script>
-            const baseUrl = '{{ rtrim(route("admin.clients.index"), "/") }}';
+            const baseUrl = '{{ rtrim(route('admin.clients.index'), '/') }}';
 
             function openEdit(id, name, description) {
                 document.getElementById('edit-form').action = baseUrl + '/' + id;
@@ -143,6 +142,7 @@
                 document.getElementById('edit-description').value = description;
                 document.getElementById('edit-modal').classList.remove('hidden');
             }
+
             function closeEdit() {
                 document.getElementById('edit-modal').classList.add('hidden');
             }

@@ -4,7 +4,7 @@ switch_diagram_generator.py
 PNG diagram per switch.
 Usage: python switch_diagram_generator.py <input.json> <output.png>
 """
-import sys, os, json, math
+import sys, os, json, math, re
 
 import matplotlib
 matplotlib.use('Agg')
@@ -36,6 +36,29 @@ def load_img(filename, size=None):
         return np.array(img)
     except Exception:
         return None
+
+
+def detect_device_icon(desc):
+    """Return icon filename for a non-DB neighbor based on display_string keywords."""
+    d = (desc or '').lower()
+    if 'router'           in d: return 'router.png'
+    if 'firewall'         in d: return 'firewall.png'
+    if 'wireless_controler' in d or 'wireless' in d: return 'wireless_controler.png'
+    if 'acces_point' in d or 'access_point' in d or re.search(r'\bap\b', d): return 'acces_point.png'
+    if 'modem'            in d: return 'modem.png'
+    if 'server_torre'     in d or 'server torre' in d: return 'server_torre.png'
+    if 'server_rack'      in d or 'server rack' in d or 'server' in d: return 'server_rack.png'
+    if 'storage'          in d: return 'storage.png'
+    if 'internet'         in d: return 'internet.png'
+    if 'network_cloud'    in d or 'cloud' in d: return 'network_cloud.png'
+    if 'pc_desktop'       in d or 'desktop' in d or re.search(r'\bpc\b', d): return 'pc_desktop.png'
+    if 'laptop'           in d or 'notebook' in d: return 'laptop.png'
+    if 'ip_phone'         in d or 'phone' in d or 'voip' in d: return 'ip_phone.png'
+    if 'printer'          in d or 'impresora' in d: return 'printer.png'
+    if 'security_camera'  in d or 'camera' in d or 'camara' in d: return 'security_camera.png'
+    if 'vpn_conection'    in d or 'vpn' in d: return 'vpn_conection.png'
+    if 'load_balancer'    in d or re.search(r'\blb\b', d): return 'load_balancer.png'
+    return 'access_switch.png'
 
 
 def detect_role(name):
@@ -210,8 +233,8 @@ def _draw_port_node(ax, cx, cy, nx, ny, port):
 
     if is_documented:
         e_color = '#16A34A' if in_db else '#EA580C'
-        ls_val  = '-' if in_db else (0, (5, 3))
-        box_w   = 0.36
+        ls_val  = '-'   # always solid — dashed removed
+        box_w   = 0.38
     else:
         e_color = '#9CA3AF'
         ls_val  = (0, (3, 2))
@@ -236,9 +259,9 @@ def _draw_port_node(ax, cx, cy, nx, ny, port):
     if is_documented:
         if in_db:
             nb_role = detect_role(desc)
-            nb_icon = load_img(ROLE_ICON.get(nb_role, ROLE_ICON['access']), size=(28, 28))
+            nb_icon = load_img(ROLE_ICON.get(nb_role, ROLE_ICON['access']), size=(56, 56))
         else:
-            nb_icon = load_img(ROLE_ICON['access'], size=(28, 28))
+            nb_icon = load_img(detect_device_icon(desc), size=(56, 56))
 
         nb_model = abbrev(port.get('model') or '', 20)
         nb_ip    = port.get('ip') or ''
@@ -248,8 +271,8 @@ def _draw_port_node(ax, cx, cy, nx, ny, port):
         if nb_ip:
             lines.append(nb_ip)
 
-        box_h   = 0.10 + 0.042 * (len(lines) - 1)
-        icon_sz = 0.048
+        icon_sz = 0.092                                    # display size in axes coords
+        box_h   = max(icon_sz + 0.030, 0.10 + 0.042 * (len(lines) - 1))
 
         ax.add_patch(FancyBboxPatch(
             (nx - box_w / 2, ny - box_h / 2), box_w, box_h,

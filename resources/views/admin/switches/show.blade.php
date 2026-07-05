@@ -4,387 +4,597 @@
     ['name' => $switch->sys_name ?? 'Detalle'],
 ]">
 
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl">{{ $switch->sys_name ?? 'Switch sin nombre' }}</h2>
-    </x-slot>
+    @php
+        $isOnline = $switch->parse_status === 'ok';
+        $activeCount = count($switch->active_ports ?? []);
+        $edpCount = count($switch->edp_ports ?? []);
+        $vlanCount = count($switch->vlans ?? []);
+        $routeCount = count($switch->ip_routes ?? []);
+        $statusLabel = $isOnline ? 'ONLINE' : strtoupper($switch->parse_status ?? 'UNKNOWN');
+        $statusColor = $isOnline
+            ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+            : 'text-red-600 bg-red-50 border-red-200';
+        $dotColor = $isOnline ? 'bg-emerald-500' : 'bg-red-500';
+        $arreglo = $switch->is_stacked ? 'STACK' : 'STANDALONE';
 
-    <div class="max-w-5xl mx-auto py-8 px-4 space-y-6">
+        // Botón "Volver al inventario" si se llegó desde client-hub
+        $fromClientId = request()->query('from_client');
+        $fromClient   = $fromClientId ? \App\Models\Client::find((int) $fromClientId) : null;
 
-        {{-- ── HEADER ─────────────────────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-            <div class="flex items-start justify-between">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
-                        {{ $switch->sys_name ?? '—' }}
-                    </h2>
-                    @if($switch->sys_location)
-                        <p class="text-sm text-gray-400 mt-0.5">{{ $switch->sys_location }}</p>
-                    @endif
+        // Rol del switch → icono y etiqueta
+        $swRole = $switch->is_stacked
+            ? 'stack'
+            : \App\Services\TopologyBuilderService::detectRoleStatic($switch->sys_name ?? '');
+        $roleIconMap = [
+            'core' => 'core_switch.png',
+            'backbone' => 'backbone_switch.png',
+            'dist' => 'dist_switch.png',
+            'access' => 'access_switch.png',
+            'stack' => 'stack_switch.png',
+        ];
+        $roleLabelMap = [
+            'core' => 'Core',
+            'backbone' => 'Backbone',
+            'dist' => 'Distribución',
+            'access' => 'Acceso',
+            'stack' => 'Stack',
+        ];
+        $roleIconFile = $roleIconMap[$swRole] ?? 'access_switch.png';
+        $roleIconUrl = route('admin.topology.icon', $roleIconFile);
+        $roleLabel = $roleLabelMap[$swRole] ?? ucfirst($swRole);
+    @endphp
+
+    <div class="space-y-5 max-w-7xl mx-auto">
+
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── HEADER BAR ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <div class="flex items-center gap-3">
+                @if($fromClient)
+                    <a href="{{ route('admin.hub.inventario', $fromClient) }}"
+                       class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium
+                              text-yellow-600 bg-white hover:bg-yellow-50 border border-yellow-200 rounded-lg transition">
+                        <i class="ri-arrow-left-s-line text-base"></i> {{ $fromClient->name }}
+                    </a>
+                @endif
+                {{-- Badge estado --}}
+                <span
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold
+                             rounded-full border {{ $statusColor }}">
+                    <span class="w-2 h-2 rounded-full {{ $dotColor }} animate-pulse"></span>
+                    {{ $statusLabel }} — {{ $switch->sys_name ?? '—' }}
+                </span>
+                {{-- @if ($switch->batch)
+                    <a href="{{ route('admin.batches.show', $switch->batch) }}"
+                        class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                        <i class="ri-node-tree text-xs"></i>
+                        {{ $switch->batch->name }}
+                    </a>
+                @endif --}}
+            </div>
+
+            {{-- Acciones --}}
+            <div class="flex items-center gap-2 flex-wrap">
+                @if ($activeCount > 0)
+                    <a href="{{ route('admin.switches.ports-diagram', $switch) }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold
+                              text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">
+                        <i class="ri-git-branch-line text-sm"></i> Ver diagrama de puertos
+                    </a>
+                @endif
+                <button onclick="openSwitchPng()"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold
+                               text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition">
+                    <i class="ri-image-line text-sm"></i> Ver imagen PNG
+                </button>
+                @if ($switch->config_path)
+                    <a href="{{ route('admin.switches.config.download', $switch) }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold
+                              text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition">
+                        <i class="ri-file-text-line text-sm"></i> Config.txt
+                    </a>
+                @endif
+                <form method="POST" action="{{ route('admin.switches.destroy', $switch) }}"
+                    onsubmit="return confirm('¿Eliminar {{ addslashes($switch->sys_name ?? 'este switch') }}? No se puede deshacer.')">
+                    @csrf @method('DELETE')
+                    <button type="submit"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold
+                                   text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition">
+                        <i class="ri-delete-bin-line text-sm"></i> Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <h1 class="text-2xl font-bold text-gray-800">Detalle del Switch</h1>
+
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── STATS CARDS ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+
+            {{-- Puertos activos --}}
+            <div
+                class="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4
+                        border-l-4 border-l-emerald-400">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                    <i class="ri-router-line text-lg text-emerald-500"></i>
                 </div>
-                <div class="flex items-center gap-2">
-                    @if($switch->batch)
-                        <a href="{{ route('admin.batches.show', $switch->batch) }}"
-                           class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full hover:bg-blue-100 transition">
-                            {{ $switch->batch->name }}
-                        </a>
-                    @endif
-                    @if($switch->config_path)
-                        <a href="{{ route('admin.switches.config.download', $switch) }}"
-                           title="Descargar configuración .txt"
-                           class="inline-flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-emerald-100 text-gray-600 hover:text-emerald-700 px-3 py-1.5 rounded-full transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Config .txt
-                        </a>
-                    @endif
-
-                    {{-- Eliminar switch --}}
-                    <form method="POST" action="{{ route('admin.switches.destroy', $switch) }}"
-                          onsubmit="return confirm('¿Eliminar {{ addslashes($switch->sys_name ?? 'este switch') }}? Esta acción no se puede deshacer.')">
-                        @csrf @method('DELETE')
-                        <button type="submit"
-                                title="Eliminar switch"
-                                class="inline-flex items-center gap-1.5 text-xs bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 px-3 py-1.5 rounded-full transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            Eliminar
-                        </button>
-                    </form>
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">
+                        {{ $activeCount }}
+                    </div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Puertos activos</div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 mt-6 text-sm">
-                <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">MAC</p>
-                    <p class="font-mono font-medium mt-0.5">{{ $switch->system_mac ?? '—' }}</p>
+            {{-- Vecinos EDP --}}
+            <div
+                class="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4
+                        border-l-4 border-l-blue-400">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                    <i class="ri-share-line text-lg text-blue-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">Tipo</p>
-                    <p class="mt-0.5">{{ $switch->system_type ?? '—' }}</p>
+                    <div class="text-2xl font-bold text-gray-800">{{ $edpCount }}</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">Vecinos EDP</div>
+                </div>
+            </div>
+
+            {{-- Estado --}}
+            <div
+                class="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4
+                        border-l-4 {{ $isOnline ? 'border-l-emerald-400' : 'border-l-red-400' }}">
+                <div
+                    class="w-10 h-10 rounded-xl {{ $isOnline ? 'bg-emerald-50' : 'bg-red-50' }}
+                            flex items-center justify-center shrink-0">
+                    <i class="ri-pulse-line text-lg {{ $isOnline ? 'text-emerald-500' : 'text-red-500' }}"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">Serie</p>
-                    <p class="font-mono mt-0.5">{{ $switch->serial_number ?? '—' }}</p>
+                    <div class="mt-0.5">
+                        <span
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full
+                                     {{ $isOnline ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white' }}">
+                            <span
+                                class="w-1.5 h-1.5 rounded-full bg-white {{ $isOnline ? 'animate-pulse' : '' }}"></span>
+                            {{ $statusLabel }}
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide mt-1">Estado Switch</div>
+                </div>
+            </div>
+
+            {{-- VLANs --}}
+            <div
+                class="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4
+                        border-l-4 border-l-amber-400">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                    <i class="ri-stack-line text-lg text-amber-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">IP Gestión</p>
-                    <p class="font-mono mt-0.5">{{ $switch->management_ip ?? '—' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">Firmware</p>
-                    <p class="mt-0.5">{{ $switch->firmware_version ?? '—' }}</p>
-                </div>
-                <div>
-                    <p class="text-xs text-gray-400 uppercase tracking-wide">Contacto</p>
-                    <p class="mt-0.5 text-gray-600 text-xs">{{ $switch->sys_contact ?? '—' }}</p>
+                    <div class="text-2xl font-bold text-gray-800">{{ $vlanCount }}</div>
+                    <div class="text-xs text-gray-500 uppercase tracking-wide mt-0.5">VLANs</div>
                 </div>
             </div>
         </div>
 
-        {{-- ── ARREGLO (STACK / STANDALONE) ─────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
-                <img src="{{ asset('storage/media/' . ($switch->is_stacked ? 'switch-stacking.svg' : 'switch-standalone.svg')) }}"
-                     alt="{{ $switch->is_stacked ? 'Stacking' : 'Standalone' }}" class="w-6 h-6">
-                <h3 class="font-semibold">
-                    @if($switch->is_stacked)
-                        Arreglo en Stack — {{ count($switch->stack_members ?? []) }} switches
-                        @if($switch->stack_topology)
-                            <span class="ml-2 inline-flex flex-col gap-1 align-middle">
-                                @foreach(explode("\n", $switch->stack_topology) as $line)
-                                    @php
-                                        // Separa la etiqueta ("Stack/Active Topology is a") del valor (Ring / Daisy-Chain)
-                                        preg_match('/^(.*\bis\s+a\b)\s+(.+)$/i', trim($line), $tm);
-                                        $label = $tm[1] ?? $line;
-                                        $value = $tm[2] ?? null;
-                                        $isRing = $value && stripos($value, 'ring') !== false;
-                                        $badgeClass = $isRing
-                                            ? 'bg-purple-100 text-purple-700'
-                                            : 'bg-emerald-100 text-emerald-700';
-                                    @endphp
-                                    <span class="text-xs text-gray-500">
-                                        {{ $label }}
-                                        @if($value)
-                                            <span class="ml-1 px-2 py-0.5 rounded-full font-semibold {{ $badgeClass }}">
-                                                {{ $value }}
-                                            </span>
-                                        @endif
-                                    </span>
-                                @endforeach
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── INFO GRID ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        <div class="bg-white border border-gray-200 rounded-xl p-5">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-5 text-sm">
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">MAC Address</p>
+                    <p class="font-mono font-semibold text-blue-600 text-sm">{{ $switch->system_mac ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">Modelo / Tipo</p>
+                    <p class="font-medium text-gray-700 text-sm">{{ $switch->system_type ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">Número de Serie</p>
+                    <p class="font-mono text-gray-700 text-sm">{{ $switch->serial_number ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">Versión Firmware</p>
+                    <p class="font-mono text-gray-700 text-sm">{{ $switch->firmware_version ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">IP Gestión</p>
+                    <p class="font-mono font-semibold text-blue-600 text-sm">{{ $switch->management_ip ?? '—' }}</p>
+                </div>
+                <div class="md:col-span-2">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">Contacto SysContact</p>
+                    <p class="text-gray-600 text-sm">{{ $switch->sys_contact ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 uppercase tracking-widest font-medium mb-1">Estado Físico</p>
+                    <div class="flex items-center gap-2">
+                        <img src="{{ $roleIconUrl }}" alt="{{ $roleLabel }}"
+                            class="w-9 h-9 object-contain shrink-0">
+                        <div>
+                            <div class="text-sm font-semibold text-gray-700">{{ $roleLabel }}</div>
+                            <div class="text-[10px] text-gray-400 uppercase tracking-wide">{{ $arreglo }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── STACK (solo si aplica) ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        @if ($switch->is_stacked && !empty($switch->stack_members))
+            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <i class="ri-stack-line text-amber-500"></i>
+                    <h3 class="font-semibold text-gray-700 text-sm">
+                        Arreglo en Stack — {{ count($switch->stack_members) }} switches
+                    </h3>
+                    @if ($switch->stack_topology)
+                        @php preg_match('/is\s+a\s+(\S+)/i', $switch->stack_topology, $tm); @endphp
+                        @if (!empty($tm[1]))
+                            <span
+                                class="text-xs px-2 py-0.5 rounded-full
+                                     {{ stripos($tm[1], 'ring') !== false ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700' }}
+                                     font-medium">
+                                {{ $tm[1] }}
                             </span>
                         @endif
-                    @else
-                        Arreglo Standalone (1 switch)
                     @endif
-                </h3>
-            </div>
-
-            @if($switch->is_stacked)
+                </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-xs uppercase">
+                        <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
                             <tr>
-                                <th class="px-4 py-2 text-left">Slot</th>
-                                <th class="px-4 py-2 text-left">Serie</th>
-                                <th class="px-4 py-2 text-left">MAC Address</th>
-                                <th class="px-4 py-2 text-left">Rol</th>
-                                <th class="px-4 py-2 text-left">Estado</th>
+                                <th class="px-5 py-2.5 text-left">Slot</th>
+                                <th class="px-5 py-2.5 text-left">Serie</th>
+                                <th class="px-5 py-2.5 text-left">MAC Address</th>
+                                <th class="px-5 py-2.5 text-left">Rol</th>
+                                <th class="px-5 py-2.5 text-left">Estado</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                            @forelse ($switch->stack_members ?? [] as $member)
-                                <tr>
-                                    <td class="px-4 py-2 font-bold text-blue-700">
+                        <tbody class="divide-y divide-gray-50">
+                            @foreach ($switch->stack_members as $member)
+                                <tr class="hover:bg-gray-50/60">
+                                    <td class="px-5 py-2.5 font-bold text-blue-600">
                                         Slot-{{ $member['slot'] }}
-                                        @if(!empty($member['is_current']))
-                                            <span class="ml-1 text-xs text-gray-400">(actual)</span>
+                                        @if (!empty($member['is_current']))
+                                            <span class="ml-1 text-xs text-gray-400 font-normal">(actual)</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-2 font-mono text-xs">{{ $member['serial_number'] ?? '—' }}</td>
-                                    <td class="px-4 py-2 font-mono text-xs text-gray-500">{{ $member['mac'] ?? '—' }}</td>
-                                    <td class="px-4 py-2">
+                                    <td class="px-5 py-2.5 font-mono text-xs text-gray-600">
+                                        {{ $member['serial_number'] ?? '—' }}</td>
+                                    <td class="px-5 py-2.5 font-mono text-xs text-gray-400">{{ $member['mac'] ?? '—' }}
+                                    </td>
+                                    <td class="px-5 py-2.5">
                                         @php
-                                            $roleColors = [
-                                                'Master'  => 'bg-amber-100 text-amber-800',
-                                                'Backup'  => 'bg-emerald-100 text-emerald-800',
-                                                'Standby' => 'bg-sky-100 text-sky-800',
+                                            $roleCls = [
+                                                'Master' => 'bg-amber-100 text-amber-700',
+                                                'Backup' => 'bg-emerald-100 text-emerald-700',
+                                                'Standby' => 'bg-sky-100 text-sky-700',
                                             ];
-                                            $roleClass = $roleColors[$member['role'] ?? ''] ?? 'bg-gray-100 text-gray-600';
+                                            $rc = $roleCls[$member['role'] ?? ''] ?? 'bg-gray-100 text-gray-500';
                                         @endphp
-                                        <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ $roleClass }}">
+                                        <span
+                                            class="px-2 py-0.5 rounded-full text-xs font-semibold {{ $rc }}">
                                             {{ $member['role'] ?? '—' }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-2 text-gray-500 text-xs">{{ $member['stack_state'] ?? '—' }}</td>
+                                    <td class="px-5 py-2.5 text-xs text-gray-500">{{ $member['stack_state'] ?? '—' }}
+                                    </td>
                                 </tr>
-                            @empty
-                                <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Sin información de miembros</td></tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
-            @endif
-        </div>
+            </div>
+        @endif
 
-        {{-- ── VLANs ───────────────────────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                <h3 class="font-semibold">VLANs ({{ count($switch->vlans ?? []) }})</h3>
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── VLANs ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <h3 class="font-semibold text-gray-700 text-sm">VLANs</h3>
+                    <span class="text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
+                        {{ $vlanCount }} ACTIVO{{ $vlanCount !== 1 ? 'S' : '' }}
+                    </span>
+                </div>
+                <button class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition">
+                    <i class="ri-settings-3-line"></i> Configurar
+                </button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
                         <tr>
-                            <th class="px-4 py-2 text-left">Nombre</th>
-                            <th class="px-4 py-2 text-left">VID</th>
-                            <th class="px-4 py-2 text-left">IP / Máscara</th>
-                            <th class="px-4 py-2 text-left">Flags activas</th>
-                            <th class="px-4 py-2 text-center">Puertos activos</th>
-                            <th class="px-4 py-2 text-left">VR</th>
+                            <th class="px-5 py-2.5 text-left">Nombre</th>
+                            <th class="px-5 py-2.5 text-left">VID</th>
+                            <th class="px-5 py-2.5 text-left">IP / Máscara</th>
+                            <th class="px-5 py-2.5 text-center">Estado</th>
+                            <th class="px-5 py-2.5 text-center">Puertos</th>
+                            <th class="px-5 py-2.5 text-left">VR</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @forelse ($switch->vlans ?? [] as $vlan)
-                            <tr>
-                                <td class="px-4 py-2 font-medium">{{ $vlan['name'] }}</td>
-                                <td class="px-4 py-2 font-mono text-xs">{{ $vlan['vid'] }}</td>
-                                <td class="px-4 py-2 font-mono text-xs">{{ $vlan['protocol_addr'] ?? '—' }}</td>
-                                <td class="px-4 py-2">
-                                    @php $letters = $vlan['flags_active'] ?? []; @endphp
-                                    @if(!empty($letters))
-                                        <div class="flex flex-wrap gap-1">
-                                            @foreach($letters as $l)
-                                                <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-mono font-bold">{{ $l }}</span>
-                                            @endforeach
-                                        </div>
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($switch->vlans ?? [] as $vlan)
+                            @php
+                                $portsActive = $vlan['ports_active'] ?? '0';
+                                $portNum = (int) $portsActive;
+                                $vOnline = $portNum > 0 || in_array('A', $vlan['flags_active'] ?? []);
+                            @endphp
+                            <tr class="hover:bg-gray-50/60">
+                                <td class="px-5 py-2.5 font-semibold text-gray-800">{{ $vlan['name'] }}</td>
+                                <td class="px-5 py-2.5 font-mono text-xs text-gray-500">{{ $vlan['vid'] }}</td>
+                                <td class="px-5 py-2.5 font-mono text-xs">
+                                    @if (!empty($vlan['protocol_addr']))
+                                        <span class="text-blue-600">{{ $vlan['protocol_addr'] }}</span>
                                     @else
                                         <span class="text-gray-300">—</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-2 text-center text-gray-600">{{ $vlan['ports_active'] ?? '—' }}</td>
-                                <td class="px-4 py-2 text-gray-400 text-xs">{{ $vlan['virtual_router'] ?? '—' }}</td>
+                                <td class="px-5 py-2.5 text-center">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full
+                                                 {{ $vOnline ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white' }}">
+                                        {{ $vOnline ? 'ONLINE' : 'OFFLINE' }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-2.5 text-center">
+                                    <span
+                                        class="text-xs font-semibold {{ $vOnline ? 'text-emerald-600' : 'text-red-500' }}">
+                                        {{ $portsActive }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-2.5 text-xs text-gray-400">{{ $vlan['virtual_router'] ?? '—' }}
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">Sin VLANs registradas</td></tr>
+                            <tr>
+                                <td colspan="6" class="px-5 py-8 text-center text-gray-400 text-sm">Sin VLANs
+                                    registradas</td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
 
-        {{-- ── RUTAS IP ────────────────────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                <h3 class="font-semibold">Rutas IP ({{ count($switch->ip_routes ?? []) }})</h3>
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── RUTAS IP + VECINOS EDP (2 columnas) ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            {{-- Rutas IP --}}
+            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
+                    <i class="ri-route-line text-indigo-400"></i>
+                    <h3 class="font-semibold text-gray-700 text-sm">Rutas IP ({{ $routeCount }})</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                            <tr>
+                                <th class="px-5 py-2.5 text-left">Destino</th>
+                                <th class="px-5 py-2.5 text-left">Gateway</th>
+                                <th class="px-5 py-2.5 text-left">VLAN</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @forelse($switch->ip_routes ?? [] as $route)
+                                @php
+                                    $oriColors = [
+                                        '#S' => 'bg-blue-100 text-blue-700',
+                                        '#D' => 'bg-violet-100 text-violet-700',
+                                        '#C' => 'bg-emerald-100 text-emerald-700',
+                                        '#O' => 'bg-orange-100 text-orange-700',
+                                    ];
+                                    $oriCls = $oriColors[$route['ori']] ?? 'bg-gray-100 text-gray-600';
+                                @endphp
+                                <tr class="hover:bg-gray-50/60">
+                                    <td class="px-5 py-2.5">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-bold px-1.5 py-0.5 rounded {{ $oriCls }}">
+                                                {{ $route['ori'] }}
+                                            </span>
+                                            <span class="font-mono text-xs font-medium text-gray-700">
+                                                {{ $route['destination'] }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="px-5 py-2.5 font-mono text-xs text-gray-500">{{ $route['gateway'] }}
+                                    </td>
+                                    <td class="px-5 py-2.5">
+                                        @if (!empty($route['vlan']))
+                                            <span
+                                                class="text-xs font-semibold text-blue-600">{{ $route['vlan'] }}</span>
+                                        @else
+                                            <span class="text-gray-300">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="px-5 py-8 text-center text-gray-400 text-sm">Sin rutas
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- Vecinos EDP --}}
+            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
+                    <i class="ri-share-circle-line text-emerald-400"></i>
+                    <h3 class="font-semibold text-gray-700 text-sm">Vecinos EDP ({{ $edpCount }})</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                            <tr>
+                                <th class="px-5 py-2.5 text-left">Puerto local</th>
+                                <th class="px-5 py-2.5 text-left">Vecino</th>
+                                <th class="px-5 py-2.5 text-right">VLANs</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @forelse($switch->edp_ports ?? [] as $edp)
+                                <tr class="hover:bg-gray-50/60">
+                                    <td class="px-5 py-2.5">
+                                        <span
+                                            class="font-mono font-bold text-blue-600 text-sm">{{ $edp['port'] }}</span>
+                                    </td>
+                                    <td class="px-5 py-2.5">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                            <span class="font-medium text-gray-700">{{ $edp['neighbor'] }}</span>
+                                        </div>
+                                        @if (!empty($edp['remote_port']))
+                                            <div class="text-xs text-gray-400 ml-3.5 mt-0.5 font-mono">
+                                                Puerto remoto: {{ $edp['remote_port'] }}
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="px-5 py-2.5 text-right">
+                                        <span
+                                            class="text-xs font-semibold text-gray-600">{{ $edp['num_vlans'] }}</span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="px-5 py-8 text-center text-gray-400 text-sm">Sin vecinos
+                                        EDP</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        {{-- ── PUERTOS ACTIVOS ── --}}
+        {{-- ══════════════════════════════════════════════════════════════════════ --}}
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                    <h3 class="font-semibold text-gray-700 text-sm">Detalle de Puertos Activos</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Monitoreo en tiempo real de interfaces (E + A)</p>
+                </div>
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold
+                             bg-emerald-500 text-white rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    LIVE STATUS
+                </span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
                         <tr>
-                            <th class="px-4 py-2 text-left">Ori</th>
-                            <th class="px-4 py-2 text-left">Destino</th>
-                            <th class="px-4 py-2 text-left">Gateway</th>
-                            <th class="px-4 py-2 text-center">Mtr</th>
-                            <th class="px-4 py-2 text-left">Flags</th>
-                            <th class="px-4 py-2 text-left">VLAN</th>
-                            <th class="px-4 py-2 text-left">Duración</th>
+                            <th class="px-5 py-2.5 text-left">Puerto</th>
+                            <th class="px-5 py-2.5 text-left">Descripción</th>
+                            <th class="px-5 py-2.5 text-left">VLAN</th>
+                            <th class="px-5 py-2.5 text-left">Velocidad</th>
+                            <th class="px-5 py-2.5 text-left">Dúplex</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @forelse($switch->ip_routes ?? [] as $route)
-                            <tr>
-                                <td class="px-4 py-2">
-                                    <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-mono font-bold">{{ $route['ori'] }}</span>
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($switch->active_ports ?? [] as $port)
+                            <tr class="hover:bg-gray-50/60">
+                                <td class="px-5 py-2.5">
+                                    <span class="font-mono font-bold text-blue-600">{{ $port['port'] }}</span>
                                 </td>
-                                <td class="px-4 py-2 font-mono text-xs font-medium">{{ $route['destination'] }}</td>
-                                <td class="px-4 py-2 font-mono text-xs">{{ $route['gateway'] }}</td>
-                                <td class="px-4 py-2 text-center">{{ $route['mtr'] }}</td>
-                                <td class="px-4 py-2 font-mono text-xs text-gray-400">{{ $route['flags'] ?? '—' }}</td>
-                                <td class="px-4 py-2 font-medium">{{ $route['vlan'] }}</td>
-                                <td class="px-4 py-2 text-xs text-gray-400">{{ $route['duration'] ?? '—' }}</td>
+                                <td class="px-5 py-2.5 text-xs port-desc-cell cursor-pointer group/desc"
+                                    data-port="{{ $port['port'] }}" data-desc="{{ $port['display_string'] }}"
+                                    onclick="startEditDesc(this)" title="Clic para editar descripción">
+                                    <span
+                                        class="port-desc-text {{ $port['display_string'] ? 'text-gray-700' : 'text-gray-300 italic' }}">{{ $port['display_string'] ?: '—' }}</span>
+                                    <i
+                                        class="ri-pencil-line ml-1 text-gray-300 opacity-0 group-hover/desc:opacity-100 transition-opacity text-[11px]"></i>
+                                </td>
+                                <td class="px-5 py-2.5">
+                                    <span
+                                        class="font-mono text-xs text-gray-600">({{ $port['vlan_name'] ?? '—' }})</span>
+                                </td>
+                                <td class="px-5 py-2.5">
+                                    <div class="flex items-center gap-1.5">
+                                        <i class="ri-flashlight-line text-amber-400 text-xs"></i>
+                                        <span class="font-semibold text-gray-700 text-xs">
+                                            {{ $port['speed_actual'] }} Mbps
+                                        </span>
+                                        <span
+                                            class="px-1.5 py-0.5 text-xs font-bold bg-emerald-500 text-white rounded-full">
+                                            ONLINE
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-2.5">
+                                    <span
+                                        class="px-2 py-0.5 text-xs font-bold rounded
+                                                 {{ strtoupper($port['duplex_actual']) === 'FULL' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ strtoupper($port['duplex_actual']) }}
+                                    </span>
+                                </td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="px-4 py-6 text-center text-gray-400">Sin rutas registradas</td></tr>
+                            <tr>
+                                <td colspan="5" class="px-5 py-8 text-center text-gray-400 text-sm">Sin puertos
+                                    activos</td>
+                            </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        {{-- ── VECINOS EDP ─────────────────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                <h3 class="font-semibold">Vecinos EDP ({{ count($switch->edp_ports ?? []) }})</h3>
+            <div class="px-5 py-2.5 border-t border-gray-50 bg-gray-50/50 text-xs text-gray-400 text-center">
+                <i class="ri-time-line mr-1"></i>
+                Última actualización sincronizada: {{ $switch->parsed_at?->diffForHumans() ?? 'hace un momento' }}
             </div>
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-xs uppercase">
-                    <tr>
-                        <th class="px-4 py-2 text-left">Puerto</th>
-                        <th class="px-4 py-2 text-left">Vecino</th>
-                        <th class="px-4 py-2 text-left">Neighbor-ID</th>
-                        <th class="px-4 py-2 text-left">Puerto remoto</th>
-                        <th class="px-4 py-2 text-center">VLANs</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @forelse ($switch->edp_ports ?? [] as $edp)
-                        <tr>
-                            <td class="px-4 py-2 font-bold text-blue-700">{{ $edp['port'] }}</td>
-                            <td class="px-4 py-2 font-medium">{{ $edp['neighbor'] }}</td>
-                            <td class="px-4 py-2 font-mono text-xs text-gray-400">{{ $edp['neighbor_id'] }}</td>
-                            <td class="px-4 py-2 font-mono font-bold">{{ $edp['remote_port'] }}</td>
-                            <td class="px-4 py-2 text-center">{{ $edp['num_vlans'] }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Sin vecinos EDP</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
         </div>
 
-        {{-- ── PUERTOS ACTIVOS ─────────────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <h3 class="font-semibold">Puertos activos (E + A) — {{ count($switch->active_ports ?? []) }}</h3>
-                <div class="flex items-center gap-2">
-                    @if(count($switch->active_ports ?? []) > 0)
-                        <a href="{{ route('admin.switches.ports-diagram', $switch) }}"
-                           class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                            </svg>
-                            Ver diagrama de puertos
-                        </a>
-                    @endif
-                    {{-- Botón Imagen PNG --}}
-                    <button onclick="openSwitchPng()"
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Ver imagen PNG
-                    </button>
-                </div>
-            </div>
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-800 text-gray-500 text-xs uppercase">
-                    <tr>
-                        <th class="px-4 py-2 text-left">Puerto</th>
-                        <th class="px-4 py-2 text-left">Descripción</th>
-                        <th class="px-4 py-2 text-left">VLAN</th>
-                        <th class="px-4 py-2 text-left">Velocidad</th>
-                        <th class="px-4 py-2 text-left">Dúplex</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                    @forelse ($switch->active_ports ?? [] as $port)
-                        <tr>
-                            <td class="px-4 py-2 font-bold">{{ $port['port'] }}</td>
-                            <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ $port['display_string'] ?: '—' }}</td>
-                            <td class="px-4 py-2 font-mono text-xs">{{ $port['vlan_name'] }}</td>
-                            <td class="px-4 py-2">{{ $port['speed_actual'] }} Mbps</td>
-                            <td class="px-4 py-2">{{ $port['duplex_actual'] }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Sin puertos activos</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+    </div>{{-- /max-w-7xl --}}
 
-    </div>
-
-    {{-- ── Modal: Imagen PNG del switch ──────────────────────── --}}
-    <div id="png-modal"
-         class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"
-         style="background: rgba(0,0,0,0.6)">
+    {{-- ══════════════════════════════════════════════════════════════════════ --}}
+    {{-- ── MODAL: Imagen PNG del switch ── --}}
+    {{-- ══════════════════════════════════════════════════════════════════════ --}}
+    <div id="png-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"
+        style="background:rgba(0,0,0,0.6)">
         <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full flex flex-col" style="max-height:92vh">
-            {{-- Cabecera --}}
             <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                 <div class="flex items-center gap-3">
-                    <h3 class="font-semibold text-gray-800">
-                        Diagrama — {{ $switch->sys_name ?? 'Switch' }}
-                    </h3>
-                    {{-- Toggle con/sin VLANs --}}
+                    <h3 class="font-semibold text-gray-800">Diagrama — {{ $switch->sys_name ?? 'Switch' }}</h3>
                     <div class="flex rounded-lg overflow-hidden border border-gray-200 text-xs font-medium">
                         <button id="btn-mode-diagram" onclick="setMode(false)"
-                                class="px-3 py-1.5 bg-indigo-600 text-white transition">
-                            Solo diagrama
-                        </button>
+                            class="px-3 py-1.5 bg-violet-600 text-white transition">Solo diagrama</button>
                         <button id="btn-mode-vlans" onclick="setMode(true)"
-                                class="px-3 py-1.5 bg-white text-gray-500 hover:bg-gray-50 transition">
-                            + VLANs
-                        </button>
+                            class="px-3 py-1.5 bg-white text-gray-500 hover:bg-gray-50 transition">+ VLANs</button>
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button onclick="generatePng(true)"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Regenerar
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
+                        <i class="ri-refresh-line"></i> Regenerar
                     </button>
                     <a id="png-download" href="#" download
-                       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition hidden">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        Descargar
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg transition hidden">
+                        <i class="ri-download-line"></i> Descargar
                     </a>
                     <button onclick="closePngModal()"
-                            class="text-gray-400 hover:text-gray-600 transition text-xl leading-none">&times;</button>
+                        class="text-gray-400 hover:text-gray-600 transition text-xl leading-none">&times;</button>
                 </div>
             </div>
-
-            {{-- Cuerpo --}}
             <div class="flex-1 overflow-auto p-4 flex items-center justify-center min-h-0">
                 <div id="png-loading" class="text-center text-gray-400 hidden">
-                    <svg class="animate-spin w-10 h-10 mx-auto mb-3 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    <svg class="animate-spin w-10 h-10 mx-auto mb-3 text-violet-500"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                            stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
                     <p class="text-sm">Generando diagrama...</p>
                 </div>
@@ -393,98 +603,179 @@
                     <p id="png-error-detail" class="text-xs mt-1 text-red-400"></p>
                 </div>
                 <img id="png-img" src="" alt="Diagrama del switch"
-                     class="max-w-full rounded-lg shadow hidden"
-                     style="max-height: calc(92vh - 130px)">
+                    class="max-w-full rounded-lg shadow hidden" style="max-height:calc(92vh - 130px)">
             </div>
         </div>
     </div>
 
     @push('js')
-    <script>
-        const generateBaseUrl = '{{ route("admin.switches.diagram.generate", $switch) }}';
-        const imageBaseUrl    = '{{ route("admin.switches.diagram.image", $switch) }}';
-        const csrfToken       = '{{ csrf_token() }}';
-        let   withVlans       = false;
+        <script>
+            const generateBaseUrl = '{{ route('admin.switches.diagram.generate', $switch) }}';
+            const imageBaseUrl = '{{ route('admin.switches.diagram.image', $switch) }}';
+            const csrfToken = '{{ csrf_token() }}';
+            let withVlans = false;
 
-        function setMode(vlans) {
-            withVlans = vlans;
-            document.getElementById('btn-mode-diagram').className =
-                'px-3 py-1.5 transition ' + (!vlans ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50');
-            document.getElementById('btn-mode-vlans').className =
-                'px-3 py-1.5 transition ' + (vlans  ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50');
-            generatePng(false);   // intenta cargar cache; genera si no existe
-        }
-
-        function generateUrl()  { return generateBaseUrl + (withVlans ? '?with_vlans=1' : ''); }
-        function imageUrl()     { return imageBaseUrl    + (withVlans ? '?with_vlans=1' : ''); }
-        function downloadName() { return '{{ ($switch->sys_name ?? "switch") }}_diagram' + (withVlans ? '_vlans' : '') + '.png'; }
-
-        function openSwitchPng() {
-            document.getElementById('png-modal').classList.remove('hidden');
-            document.getElementById('png-modal').classList.add('flex');
-            generatePng(false);
-        }
-
-        function closePngModal() {
-            document.getElementById('png-modal').classList.add('hidden');
-            document.getElementById('png-modal').classList.remove('flex');
-        }
-
-        document.getElementById('png-modal').addEventListener('click', function(e) {
-            if (e.target === this) closePngModal();
-        });
-
-        async function generatePng(forceRegen = false) {
-            const loading = document.getElementById('png-loading');
-            const errBox  = document.getElementById('png-error');
-            const img     = document.getElementById('png-img');
-            const dl      = document.getElementById('png-download');
-
-            if (!forceRegen) {
-                const probe = new Image();
-                probe.onload = () => showImage();
-                probe.onerror = () => doGenerate();
-                probe.src = imageUrl() + (imageUrl().includes('?') ? '&' : '?') + 't=' + Date.now();
-                return;
+            function setMode(vlans) {
+                withVlans = vlans;
+                document.getElementById('btn-mode-diagram').className =
+                    'px-3 py-1.5 transition ' + (!vlans ? 'bg-violet-600 text-white' :
+                        'bg-white text-gray-500 hover:bg-gray-50');
+                document.getElementById('btn-mode-vlans').className =
+                    'px-3 py-1.5 transition ' + (vlans ? 'bg-violet-600 text-white' :
+                        'bg-white text-gray-500 hover:bg-gray-50');
+                generatePng(false);
             }
 
-            doGenerate();
+            function generateUrl() {
+                return generateBaseUrl + (withVlans ? '?with_vlans=1' : '');
+            }
 
-            async function doGenerate() {
-                [loading, errBox, img, dl].forEach(el => el.classList.add('hidden'));
-                loading.classList.remove('hidden');
+            function imageUrl() {
+                return imageBaseUrl + (withVlans ? '?with_vlans=1' : '');
+            }
 
-                try {
-                    const res = await fetch(generateUrl(), {
-                        method: 'POST',
-                        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                    });
-                    const json = await res.json();
+            function downloadName() {
+                return '{{ $switch->sys_name ?? 'switch' }}_diagram' + (withVlans ? '_vlans' : '') + '.png';
+            }
 
-                    if (!res.ok || json.error) {
-                        throw new Error(json.detail || json.error || 'Error desconocido');
+            function openSwitchPng() {
+                document.getElementById('png-modal').classList.remove('hidden');
+                document.getElementById('png-modal').classList.add('flex');
+                generatePng(false);
+            }
+
+            function closePngModal() {
+                document.getElementById('png-modal').classList.add('hidden');
+                document.getElementById('png-modal').classList.remove('flex');
+            }
+            document.getElementById('png-modal').addEventListener('click', function(e) {
+                if (e.target === this) closePngModal();
+            });
+
+            async function generatePng(forceRegen = false) {
+                const loading = document.getElementById('png-loading');
+                const errBox = document.getElementById('png-error');
+                const img = document.getElementById('png-img');
+                const dl = document.getElementById('png-download');
+
+                if (!forceRegen) {
+                    const probe = new Image();
+                    probe.onload = () => showImage();
+                    probe.onerror = () => doGenerate();
+                    probe.src = imageUrl() + '?t=' + Date.now();
+                    return;
+                }
+                doGenerate();
+
+                async function doGenerate() {
+                    [loading, errBox, img, dl].forEach(el => el.classList.add('hidden'));
+                    loading.classList.remove('hidden');
+                    try {
+                        const res = await fetch(generateUrl(), {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            },
+                        });
+                        const json = await res.json();
+                        if (!res.ok || json.error) throw new Error(json.detail || json.error || 'Error desconocido');
+                        showImage();
+                    } catch (err) {
+                        loading.classList.add('hidden');
+                        errBox.classList.remove('hidden');
+                        document.getElementById('png-error-detail').textContent = err.message;
                     }
+                }
 
-                    showImage();
-                } catch (err) {
+                function showImage() {
                     loading.classList.add('hidden');
-                    errBox.classList.remove('hidden');
-                    document.getElementById('png-error-detail').textContent = err.message;
+                    errBox.classList.add('hidden');
+                    img.src = imageUrl() + '?t=' + Date.now();
+                    img.classList.remove('hidden');
+                    dl.href = img.src;
+                    dl.download = downloadName();
+                    dl.classList.remove('hidden');
                 }
             }
+            // ── Inline edit de descripción de puerto ──────────────────────
+            const descUpdateUrl = '{{ route('admin.switches.ports.description', $switch) }}';
 
-            function showImage() {
-                loading.classList.add('hidden');
-                errBox.classList.add('hidden');
-                const ts = Date.now();
-                img.src = imageUrl() + (imageUrl().includes('?') ? '&' : '?') + 't=' + ts;
-                img.classList.remove('hidden');
-                dl.href = img.src;
-                dl.download = downloadName();
-                dl.classList.remove('hidden');
+            function startEditDesc(td) {
+                if (td.querySelector('input')) return;
+                const currentDesc = td.dataset.desc || '';
+                const span = td.querySelector('.port-desc-text');
+                const pencil = td.querySelector('.ri-pencil-line');
+                if (span) span.style.display = 'none';
+                if (pencil) pencil.style.display = 'none';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentDesc;
+                input.className =
+                    'text-xs border border-indigo-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-[130px] w-full';
+                td.appendChild(input);
+                input.focus();
+                input.select();
+
+                async function saveDesc() {
+                    const newDesc = input.value.trim();
+                    if (newDesc === (td.dataset.desc || '')) {
+                        cancelEdit();
+                        return;
+                    }
+                    try {
+                        const res = await fetch(descUpdateUrl, {
+                            method: 'PATCH',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                port: td.dataset.port,
+                                display_string: newDesc
+                            }),
+                        });
+                        const json = await res.json();
+                        if (!json.ok) throw new Error(json.error || 'Error');
+                        td.dataset.desc = newDesc;
+                        finishEdit(newDesc);
+                    } catch (err) {
+                        cancelEdit();
+                        console.error('Error guardando descripción:', err);
+                    }
+                }
+
+                function finishEdit(savedDesc) {
+                    input.remove();
+                    if (span) {
+                        span.textContent = savedDesc || '—';
+                        span.className = 'port-desc-text ' + (savedDesc ? 'text-gray-700' : 'text-gray-300 italic');
+                        span.style.display = '';
+                    }
+                    if (pencil) pencil.style.display = '';
+                }
+
+                function cancelEdit() {
+                    input.remove();
+                    if (span) span.style.display = '';
+                    if (pencil) pencil.style.display = '';
+                }
+
+                input.addEventListener('blur', saveDesc);
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        input.blur();
+                    }
+                    if (e.key === 'Escape') {
+                        input.removeEventListener('blur', saveDesc);
+                        cancelEdit();
+                    }
+                });
             }
-        }
-    </script>
+        </script>
     @endpush
 
 </x-admin-layout>

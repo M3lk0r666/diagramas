@@ -16,10 +16,11 @@
         @endif
 
         {{-- ── Encabezado del cliente ───────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 flex items-start justify-between gap-4">
+        <div
+            class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 flex items-start justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ $client->name }}</h2>
-                @if($client->description)
+                @if ($client->description)
                     <p class="text-sm text-gray-400 mt-1">{{ $client->description }}</p>
                 @endif
                 <p class="text-xs text-gray-400 mt-2">Cliente desde {{ $client->created_at->format('d/m/Y') }}</p>
@@ -29,7 +30,7 @@
                     {{ $client->batches->count() }} diagrama(s)
                 </span>
                 <a href="{{ route('admin.home') }}?client={{ $client->id }}"
-                   class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
                     + Nuevo diagrama
                 </a>
             </div>
@@ -55,23 +56,25 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                             <td class="px-4 py-3 font-semibold">
                                 <a href="{{ route('admin.batches.show', $batch) }}"
-                                   class="text-blue-600 hover:underline">{{ $batch->name }}</a>
+                                    class="text-blue-600 hover:underline">{{ $batch->name }}</a>
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <span class="inline-block bg-teal-50 text-teal-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                                <span
+                                    class="inline-block bg-teal-50 text-teal-700 text-xs font-medium px-2 py-0.5 rounded-full">
                                     {{ $batch->switches_count }}
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @php
-                                    $stClass = match($batch->status) {
+                                    $stClass = match ($batch->status) {
                                         'completed' => 'bg-green-100 text-green-700',
-                                        'failed'    => 'bg-red-100 text-red-700',
-                                        'pending'   => 'bg-gray-100 text-gray-500',
-                                        default     => 'bg-amber-100 text-amber-700',
+                                        'failed' => 'bg-red-100 text-red-700',
+                                        'pending' => 'bg-gray-100 text-gray-500',
+                                        default => 'bg-amber-100 text-amber-700',
                                     };
                                 @endphp
-                                <span class="inline-block {{ $stClass }} text-xs font-medium px-2 py-0.5 rounded-full">
+                                <span
+                                    class="inline-block {{ $stClass }} text-xs font-medium px-2 py-0.5 rounded-full">
                                     {{ ucfirst($batch->status) }}
                                 </span>
                             </td>
@@ -80,7 +83,7 @@
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <a href="{{ route('admin.switches.index', ['batch' => $batch->id]) }}"
-                                   class="text-xs text-gray-500 hover:text-blue-600 hover:underline">
+                                    class="text-xs text-gray-500 hover:text-blue-600 hover:underline">
                                     Ver switches →
                                 </a>
                             </td>
@@ -89,7 +92,8 @@
                         <tr>
                             <td colspan="5" class="px-4 py-10 text-center text-gray-400">
                                 Este cliente no tiene diagramas aún.
-                                <a href="{{ route('admin.home') }}" class="text-blue-600 hover:underline ml-1">Subir archivos</a>
+                                <a href="{{ route('admin.home') }}" class="text-blue-600 hover:underline ml-1">Subir
+                                    archivos</a>
                             </td>
                         </tr>
                     @endforelse

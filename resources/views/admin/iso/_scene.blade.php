@@ -79,9 +79,19 @@ function init() {
         updateFrustum(W, H);
     });
 
-    // Render loop
+    // Render loop — also auto-corrects canvas size each frame so that if init()
+    // ran before the browser finished laying out the page (height = 0 or partial),
+    // the canvas self-heals on the next animation frame.
+    let _lastW = 0, _lastH = 0;
     (function loop() {
         requestAnimationFrame(loop);
+        const W = wrapper.clientWidth;
+        const H = wrapper.clientHeight;
+        if (W > 0 && H > 0 && (W !== _lastW || H !== _lastH)) {
+            _lastW = W; _lastH = H;
+            renderer.setSize(W, H);
+            updateFrustum(W, H);
+        }
         renderer.render(scene, camera);
         syncLabels();
     })();
@@ -114,14 +124,29 @@ function pushCamPos() {
 }
 
 function fitCamera() {
-    const box = new THREE.Box3().setFromObject(scene);
-    if (box.isEmpty()) return;
-    const c = new THREE.Vector3();
-    box.getCenter(c);
-    cameraTarget.set(c.x, 0, c.z);
-    const sz = new THREE.Vector3();
-    box.getSize(sz);
-    frustumSize = Math.max(40, Math.min(600, Math.max(sz.x, sz.z) * 0.75));
+    // Compute bounds from actual switch positions — NOT scene.setFromObject() which
+    // includes the 2000-unit GridHelper and completely skews center + frustumSize.
+    const positions = Object.values(swPos);
+    if (positions.length) {
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+        positions.forEach(p => {
+            minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+            minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+        });
+        cameraTarget.set((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
+        const spanX = maxX - minX + PLANE_PAD * 4;
+        const spanZ = maxZ - minZ + PLANE_PAD * 4;
+        frustumSize = Math.max(40, Math.min(600, Math.max(spanX, spanZ) * 1.2));
+    } else {
+        // Fallback: traverse scene but skip the GridHelper
+        const box = new THREE.Box3();
+        scene.traverse(obj => { if (!obj.isGridHelper && obj.geometry) box.expandByObject(obj); });
+        if (box.isEmpty()) return;
+        const c = new THREE.Vector3(); box.getCenter(c);
+        cameraTarget.set(c.x, 0, c.z);
+        const sz = new THREE.Vector3(); box.getSize(sz);
+        frustumSize = Math.max(40, Math.min(600, Math.max(sz.x, sz.z) * 1.2));
+    }
     updateFrustum(renderer.domElement.clientWidth, renderer.domElement.clientHeight);
     pushCamPos();
 }

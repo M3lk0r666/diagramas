@@ -3,24 +3,124 @@
 
 ---
 
+## HISTORIAL DE VERSIONES
+
+| Versión | Fecha | Descripción |
+|---|---|---|
+| v1.0 | Deploy inicial | Inventario, topología, áreas, diagrama de puertos, vista Isométrica básica |
+| v2.0 | Actualización | IVE, selector de cliente Isométrica, edición inline de puertos, iconos de dispositivos, landing page, fix de rutas |
+
+---
+
+## ⚡ ACTUALIZACIÓN v1 → v2 (servidor ya desplegado)
+
+Si ya tienes el primer deploy corriendo, **este bloque es todo lo que necesitas ejecutar**.  
+Si es instalación nueva, ve directamente a la [sección 1](#1-preparar-el-proyecto-localmente).
+
+### Archivos nuevos / modificados en v2
+
+| Tipo | Archivo / Ruta |
+|---|---|
+| Controlador nuevo | `app/Http/Controllers/Admin/SwitchPortController.php` |
+| Controlador nuevo | `app/Http/Controllers/Admin/IsoIndexController.php` |
+| Controlador nuevo | `app/Http/Controllers/Admin/IveController.php` |
+| Vista nueva | `resources/views/admin/iso/index.blade.php` |
+| Vista nueva | `resources/views/welcome.blade.php` (reescrita — landing page) |
+| Vistas IVE | `resources/views/admin/ive/` (directorio completo) |
+| Ruta modificada | `routes/admin.php` (rutas IVE, iso.index, ports.description) |
+| Ruta modificada | `routes/web.php` (landing page, fix circular dashboard) |
+| Config modificada | `config/fortify.php` (`home` → `/admin/dashboard`) |
+| Script Python | `scripts/switch_diagram_generator.py` (iconos + tamaño) |
+| Sidebar | `resources/views/layouts/includes/admin/sidebar.blade.php` |
+| **Iconos PNG/SVG** | `scripts/icons/` (directorio completo — 30 archivos) |
+
+### Pasos en el servidor
+
+```bash
+cd /var/www/diagramas
+
+# 1. Bajar cambios
+git pull origin main
+
+# 2. Sin migraciones nuevas en v2 — omitir php artisan migrate
+
+# 3. Limpiar caches (obligatorio por cambio en config/fortify.php y rutas)
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# 4. Re-cachear para producción
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# 5. Reiniciar worker (buena práctica tras cualquier deploy)
+sudo systemctl restart diagramas-worker
+```
+
+### ⚠️ Verificar que los iconos llegaron al servidor
+
+```bash
+# Deben aparecer ~30 archivos PNG/SVG
+ls -la /var/www/diagramas/scripts/icons/
+
+# Archivos esperados (mínimo indispensable):
+# access_switch.png/svg  backbone_switch.png/svg  core_switch.png/svg
+# dist_switch.png/svg    stack_switch.png/svg
+# acces_point.png  firewall.png  router.png  server_rack.png
+# server_torre.png  modem.png  internet.png  network_cloud.png
+# laptop.png  pc_desktop.png  ip_phone.png  printer.png
+# security_camera.png  storage.png  vpn_conection.png
+# load_balancer.png  wireless_controler.png  switch-24p.png  switch-48p.png
+```
+
+Si falta algún ícono (porque el directorio no estaba trackeado en el primer commit):
+
+```bash
+# En local — forzar track de todos los iconos
+git add scripts/icons/
+git commit -m "feat: add device icons for port diagram and PNG export"
+git push origin main
+
+# En servidor
+git pull origin main
+ls -la /var/www/diagramas/scripts/icons/  # Verificar
+```
+
+### ⚠️ Verificar permiso de escritura para Python en storage
+
+El script `switch_diagram_generator.py` escribe PNGs en `storage/app/`:
+```bash
+sudo chown -R www-data:www-data /var/www/diagramas/storage/app
+sudo chmod -R 775 /var/www/diagramas/storage/app
+```
+
+---
+
+---
+
 ## 1. Preparar el proyecto localmente (antes de subir a GitHub)
 
 ### 1.1 Crear `.gitignore` correcto
+
 El `.gitignore` ya excluye correctamente: `/vendor`, `/node_modules`, `/public/build`, `/public/storage`, `.env`, `/storage/*.key`.
 
-Verificar que **no** está ignorado:
-- `storage/app/public/media/` (íconos SVG de los switches) — agregar excepción si hace falta:
-```
+Verificar que **no** está ignorado — agregar excepciones si hace falta:
+```gitignore
 # Al final del .gitignore
 !storage/app/public/media/
 !storage/app/public/media/*.svg
 ```
+
+> **`scripts/icons/` NO está en `.gitignore`** — los iconos PNG/SVG se suben con git normalmente.  
+> Si recién agregaste los iconos, asegúrate de hacer `git add scripts/icons/` explícitamente antes del primer commit.
 
 ### 1.2 Crear repositorio en GitHub
 ```bash
 # En la raíz del proyecto (C:\xampp\htdocs\laravel\diagramas)
 git init
 git add .
+git add scripts/icons/          # Forzar track de binarios PNG/SVG
 git commit -m "Initial commit"
 git branch -M main
 git remote add origin https://github.com/TU_USUARIO/TU_REPO.git
@@ -44,12 +144,11 @@ Ubuntu 22.04 LTS o Ubuntu 24.04 LTS
 | Software | Versión mínima | Uso |
 |---|---|---|
 | PHP | 8.2 | Runtime de Laravel |
-| PHP Extensions | ver abajo | Dependencias de Laravel |
 | Composer | 2.x | Gestor de paquetes PHP |
 | Node.js | 20 LTS | Compilar assets (Vite) |
 | npm | 10.x | Paquetes JS |
 | MySQL | 8.0 | Base de datos |
-| Python | 3.9+ | Scripts de diagramas |
+| Python | 3.9+ | Diagramas PNG (matplotlib, PIL) |
 | pip | 3.x | Paquetes Python |
 | Nginx o Apache | cualquiera | Web server |
 | Git | 2.x | Clonar repo |
@@ -61,6 +160,17 @@ php8.2-xml php8.2-curl php8.2-zip php8.2-gd
 php8.2-bcmath php8.2-tokenizer php8.2-fileinfo
 php8.2-intl php8.2-pdo
 ```
+
+### Paquetes Python requeridos
+
+```txt
+matplotlib
+networkx
+Pillow
+numpy
+```
+
+> Los scripts solo usan librerías estándar de Python además de estas (`re`, `json`, `os`, `sys` — ya incluidas).
 
 ---
 
@@ -104,12 +214,8 @@ npm -v    # Verificar: 10.x
 sudo apt install -y mysql-server
 sudo systemctl start mysql
 sudo systemctl enable mysql
-
-# Asegurar instalación
 sudo mysql_secure_installation
-# Responder: contraseña root, remover usuarios anónimos, deshabilitar login remoto root, etc.
 
-# Crear base de datos y usuario
 sudo mysql -u root -p
 ```
 ```sql
@@ -124,10 +230,13 @@ EXIT;
 ```bash
 sudo apt install -y python3 python3-pip python3-venv
 
-# Instalar librerías de los scripts
 pip3 install matplotlib networkx Pillow numpy
-# Verificar:
+
+# Verificar
 python3 -c "import matplotlib, networkx, PIL, numpy; print('OK')"
+
+# Verificar que puede leer iconos (necesario para switch_diagram_generator.py)
+python3 -c "from PIL import Image; img = Image.open('/var/www/diagramas/scripts/icons/access_switch.png'); print('Icono OK', img.size)"
 ```
 
 ### 3.7 Instalar Nginx
@@ -149,19 +258,31 @@ sudo chown -R $USER:www-data /var/www/diagramas
 cd /var/www/diagramas
 ```
 
-### 4.2 Instalar dependencias PHP
+### 4.2 Verificar que los iconos están presentes
+```bash
+ls scripts/icons/ | wc -l   # Debe mostrar ~30
+```
+
+Si el directorio está vacío o no existe:
+```bash
+# No se trackearon en el commit inicial — copiarlos manualmente o hacer:
+# En local: git add scripts/icons/ → commit → push
+# En servidor: git pull
+```
+
+### 4.3 Instalar dependencias PHP
 ```bash
 composer install --no-dev --optimize-autoloader
 ```
 
-### 4.3 Instalar dependencias JS y compilar assets
+### 4.4 Instalar dependencias JS y compilar assets
 ```bash
 npm install
 npm run build
-# Esto genera public/build/ con los assets compilados por Vite
+# Genera public/build/ con los assets compilados por Vite
 ```
 
-### 4.4 Crear y configurar el archivo `.env`
+### 4.5 Crear y configurar el archivo `.env`
 ```bash
 cp .env.example .env
 nano .env
@@ -191,31 +312,35 @@ CACHE_STORE=database
 FILESYSTEM_DISK=local
 ```
 
-### 4.5 Generar clave de aplicación
+### 4.6 Generar clave de aplicación
 ```bash
 php artisan key:generate
 ```
 
-### 4.6 Ejecutar migraciones
+### 4.7 Ejecutar migraciones
 ```bash
 php artisan migrate --force
 ```
 
-### 4.7 Crear el enlace simbólico de storage
+### 4.8 Crear el enlace simbólico de storage
 ```bash
 php artisan storage:link
 # Crea: public/storage → storage/app/public
 ```
 
-### 4.8 Permisos de directorios
+### 4.9 Permisos de directorios
 ```bash
 sudo chown -R www-data:www-data /var/www/diagramas/storage
 sudo chown -R www-data:www-data /var/www/diagramas/bootstrap/cache
+sudo chown -R www-data:www-data /var/www/diagramas/scripts
 sudo chmod -R 775 /var/www/diagramas/storage
 sudo chmod -R 775 /var/www/diagramas/bootstrap/cache
+sudo chmod -R 755 /var/www/diagramas/scripts
 ```
 
-### 4.9 Optimizar Laravel para producción
+> `scripts/` debe ser legible por `www-data` para que Laravel pueda ejecutar los scripts Python.
+
+### 4.10 Optimizar Laravel para producción
 ```bash
 php artisan config:cache
 php artisan route:cache
@@ -227,12 +352,10 @@ php artisan event:cache
 
 ## 5. Configurar Nginx
 
-Crear el archivo de configuración:
 ```bash
 sudo nano /etc/nginx/sites-available/diagramas
 ```
 
-Contenido:
 ```nginx
 server {
     listen 80;
@@ -267,10 +390,9 @@ server {
 }
 ```
 
-Activar el sitio:
 ```bash
 sudo ln -s /etc/nginx/sites-available/diagramas /etc/nginx/sites-enabled/
-sudo nginx -t          # Verificar configuración
+sudo nginx -t
 sudo systemctl reload nginx
 ```
 
@@ -281,20 +403,15 @@ sudo systemctl reload nginx
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d TU_DOMINIO.com -d www.TU_DOMINIO.com
-# Seguir el asistente: ingresar email, aceptar términos, elegir redirigir HTTP→HTTPS
 sudo systemctl reload nginx
-```
 
-Renovación automática (ya configurada por certbot, verificar):
-```bash
+# Verificar renovación automática
 sudo certbot renew --dry-run
 ```
 
 ---
 
-## 7. Configurar Queue Worker (procesamiento de áreas)
-
-La app usa `QUEUE_CONNECTION=database`. Crear un servicio systemd para el worker:
+## 7. Configurar Queue Worker
 
 ```bash
 sudo nano /etc/systemd/system/diagramas-worker.service
@@ -344,58 +461,122 @@ Agregar:
 
 ## 9. Actualizar la aplicación (deployments futuros)
 
-Cada vez que hagas cambios locales y quieras actualizar producción:
+### 9.1 Flujo estándar (sin cambios especiales)
 
 ```bash
-# Local: subir cambios
+# Local
 git add .
 git commit -m "descripción del cambio"
 git push origin main
 ```
 
 ```bash
-# Servidor: aplicar cambios
+# Servidor
 cd /var/www/diagramas
 
-# 1. Bajar cambios
 git pull origin main
 
-# 2. Actualizar dependencias (solo si cambió composer.json o package.json)
+# Solo si cambió composer.json
 composer install --no-dev --optimize-autoloader
+
+# Solo si cambió package.json o algún asset JS/CSS
 npm install && npm run build
 
-# 3. Migraciones nuevas (si las hay)
+# Solo si hay migraciones nuevas
 php artisan migrate --force
 
-# 4. Limpiar y re-cachear
+# Siempre — limpiar y re-cachear
 php artisan config:clear && php artisan config:cache
 php artisan route:clear  && php artisan route:cache
 php artisan view:clear   && php artisan view:cache
 
-# 5. Reiniciar worker
 sudo systemctl restart diagramas-worker
+```
+
+### 9.2 Cuando se añadan iconos nuevos a `scripts/icons/`
+
+Los archivos PNG/SVG en `scripts/icons/` se usan en dos lugares:
+- **Diagrama de puertos (browser)** — servidos via `ConnectionController::serveIcon()` → ruta `admin.topology.icon`
+- **Diagrama PNG (Python)** — leídos directamente con `PIL.Image.open()` en `switch_diagram_generator.py`
+
+Si agregas iconos nuevos:
+```bash
+# Local
+git add scripts/icons/nuevo_icono.png
+git commit -m "feat: add nuevo_icono for port diagram"
+git push origin main
+
+# Servidor
+git pull origin main
+# No requiere cache clear — los archivos los lee Python directamente
+```
+
+### 9.3 Cuando se modifiquen scripts Python
+
+```bash
+# No requiere reiniciar servicios PHP ni limpiar cache de Laravel
+# Solo hacer git pull en el servidor
+# Los scripts se ejecutan como procesos independientes por cada request
+git pull origin main
 ```
 
 ---
 
-## 10. Verificación final
+## 10. Inventario de archivos críticos en producción
+
+Archivos que **no están en git** y deben gestionarse manualmente:
+
+| Archivo / Directorio | Descripción | Acción |
+|---|---|---|
+| `.env` | Variables de entorno | Crear manualmente. Nunca en git. |
+| `storage/app/` | Archivos subidos + PNGs generados | Persistir. No borrar en deployments. |
+| `storage/logs/` | Logs de Laravel y worker | Rotar periódicamente. |
+| `public/storage` | Symlink a `storage/app/public` | Recrear con `php artisan storage:link` si desaparece. |
+
+Archivos que **sí están en git** y son críticos verificar en cada deploy:
+
+| Archivo / Directorio | Descripción |
+|---|---|
+| `scripts/icons/` | 30 PNG/SVG — iconos de dispositivos y roles de switch |
+| `scripts/switch_diagram_generator.py` | Generador de PNG por switch |
+| `scripts/topology_generator.py` | Generador de topología global |
+| `scripts/requirements.txt` | Dependencias Python |
+| `config/fortify.php` | `home` debe apuntar a `/admin/dashboard` |
+| `routes/web.php` | Ruta raíz → landing page (no redirect a /admin) |
+
+---
+
+## 11. Verificación final (instalación nueva o tras actualización mayor)
 
 ```bash
-# Comprobar que la app responde
+# App responde en la raíz — debe mostrar la landing page
 curl -I http://TU_DOMINIO.com
+# Esperar: HTTP 200 (no 302 → /admin → 404)
 
-# Comprobar logs si algo falla
+# Login funcional — debe redirigir a /admin/dashboard tras autenticarse
+# Verificar manualmente en el navegador
+
+# Logs de Laravel
 tail -f /var/www/diagramas/storage/logs/laravel.log
 
-# Comprobar que PHP-FPM está corriendo
+# PHP-FPM
 sudo systemctl status php8.2-fpm
 
-# Comprobar que el worker está activo
+# Worker activo
 sudo systemctl status diagramas-worker
 
-# Probar Python manualmente
-cd /var/www/diagramas
-python3 scripts/topology_generator.py --help
+# Python y sus dependencias
+python3 -c "import matplotlib, networkx, PIL, numpy; print('Python OK')"
+
+# Iconos accesibles por Python
+python3 -c "
+from PIL import Image
+import os
+icons = os.listdir('/var/www/diagramas/scripts/icons/')
+print(f'Iconos encontrados: {len(icons)}')
+img = Image.open('/var/www/diagramas/scripts/icons/access_switch.png')
+print(f'access_switch.png: {img.size}')
+"
 ```
 
 ---
@@ -404,7 +585,7 @@ python3 scripts/topology_generator.py --help
 
 | Servicio | Puerto | Estado |
 |---|---|---|
-| Nginx | 80, 443 | Abierto |
+| Nginx | 80, 443 | Abierto al exterior |
 | PHP-FPM | socket unix | Interno |
 | MySQL | 3306 | Solo localhost |
 | Queue Worker | — | Proceso systemd |
@@ -413,9 +594,10 @@ python3 scripts/topology_generator.py --help
 
 ## Notas importantes
 
-- **`APP_DEBUG=false`** obligatorio en producción — nunca exponer errores al usuario
-- **Backups de DB**: configurar `mysqldump` periódico o usar un servicio gestionado
-- **Permisos de Python**: el usuario `www-data` debe poder ejecutar `python3` y los scripts en `/var/www/diagramas/scripts/`
-- **Storage persistente**: el directorio `storage/app/public/` contiene archivos subidos por usuarios — excluirlo de resets de git
+- **`APP_DEBUG=false`** obligatorio en producción
+- **`config/fortify.php` `home`** debe ser `/admin/dashboard` — si queda en `'/'` el login/logout redirigiría a la landing, no al dashboard
+- **Backups de DB**: configurar `mysqldump` periódico o usar servicio gestionado
+- **`www-data` y Python**: el usuario `www-data` debe poder ejecutar `python3` y leer los iconos en `scripts/icons/`
+- **Storage persistente**: `storage/app/` contiene archivos subidos y PNGs generados — nunca borrar en un reset de git
 - **Firewall**: `sudo ufw allow 'Nginx Full'` y `sudo ufw enable`
-
+- **Iconos SVG vs PNG**: los SVG (`.svg`) se usan en el sidebar y vistas blade; los PNG (`.png`) los consume Python para los diagramas exportables

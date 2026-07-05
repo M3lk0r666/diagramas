@@ -14,8 +14,16 @@ use App\Http\Controllers\Admin\ClientManagerController;
 use App\Http\Controllers\Admin\DiagramAssemblerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IsoTopologyController;
+use App\Http\Controllers\Admin\IsoIndexController;
+use App\Http\Controllers\Admin\IveController;
+use App\Http\Controllers\Admin\ClientHubController;
+use App\Http\Controllers\Admin\SwitchPortController;
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+// Hub de clientes (selector + inventario por cliente)
+Route::get('/clientes/hub', [ClientHubController::class, 'index'])->name('hub.index');
+Route::get('/clientes/hub/{client}/inventario', [ClientHubController::class, 'inventario'])->name('hub.inventario');
 
 // Inventario central
 Route::get('/inventario', [InventarioController::class, 'index'])->name('inventario.index');
@@ -28,7 +36,7 @@ Route::delete('/clientes-manager/{client}/batches/{batch}', [ClientManagerContro
 Route::delete('/clientes-manager/{client}/batches/{batch}/switches/{switch}', [ClientManagerController::class, 'destroySwitch'])->name('clients.manage.switch.destroy');
 
 // Carga de archivos
-Route::get('/', [FileUploadController::class, 'index'])->name('home');
+Route::get('/client/subir', [FileUploadController::class, 'index'])->name('client.upload');
 Route::post('/upload', [FileUploadController::class, 'store'])->name('upload.store');
 Route::get('/batches/{batch}', [FileUploadController::class, 'show'])->name('batches.show');
 Route::get('/batches/{batch}/status', [FileUploadController::class, 'status'])->name('batches.status');
@@ -39,6 +47,7 @@ Route::get('/switches/{switch}', [SwitchController::class, 'show'])->name('switc
 Route::get('/switches/{switch}/ports-diagram', [SwitchController::class, 'portsDiagram'])->name('switches.ports-diagram');
 Route::get('/switches/{switch}/config', [SwitchController::class, 'downloadConfig'])->name('switches.config.download');
 Route::delete('/switches/{switch}', [SwitchController::class, 'destroy'])->name('switches.destroy');
+Route::patch('/switches/{switch}/ports/description', [SwitchPortController::class, 'updateDescription'])->name('switches.ports.description');
 Route::post('/switches/{switch}/diagram/generate', [SwitchController::class, 'generateSwitchDiagram'])->name('switches.diagram.generate');
 Route::get('/switches/{switch}/diagram/image', [SwitchController::class, 'switchDiagramImage'])->name('switches.diagram.image');
 
@@ -91,8 +100,14 @@ Route::get('/assembler/{project}/vectorial', [DiagramAssemblerController::class,
 Route::get('/assembler/{project}/graph', [DiagramAssemblerController::class, 'graph'])->name('assembler.graph');
 
 // Vista Isométrica 3D
+Route::get('/iso', [IsoIndexController::class, 'index'])->name('iso.index');
 Route::get('/iso/{client}', [IsoTopologyController::class, 'global'])->name('iso.global');
 Route::get('/iso/{client}/{batch}', [IsoTopologyController::class, 'area'])->name('iso.area');
+
+// Infrastructure Visualization Engine (IVE)
+Route::get('/ive',                [IveController::class, 'index'])      ->name('ive.index');
+Route::get('/ive/{client}',       [IveController::class, 'global'])     ->name('ive.global');
+Route::get('/ive/{client}/data',  [IveController::class, 'dataGlobal']) ->name('ive.data.global');
 
 // Diagrama exportado (PNG)
 Route::get('/batches/{batch}/diagram', [FileUploadController::class, 'diagram'])->name('batches.diagram');
