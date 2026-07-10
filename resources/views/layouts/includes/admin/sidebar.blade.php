@@ -76,6 +76,12 @@
             'active' => request()->routeIs('admin.assembler.*'),
         ],
         [
+            'name' => 'Mapeo de Puertos',
+            'icon' => 'ri-git-branch-line',
+            'href' => route('admin.port-mapping.index'),
+            'active' => request()->routeIs('admin.port-mapping.*'),
+        ],
+        [
             'header' => 'VISTA 3D',
         ],
         [

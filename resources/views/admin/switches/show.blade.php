@@ -19,7 +19,7 @@
 
         // Botón "Volver al inventario" si se llegó desde client-hub
         $fromClientId = request()->query('from_client');
-        $fromClient   = $fromClientId ? \App\Models\Client::find((int) $fromClientId) : null;
+        $fromClient = $fromClientId ? \App\Models\Client::find((int) $fromClientId) : null;
 
         // Rol del switch → icono y etiqueta
         $swRole = $switch->is_stacked
@@ -51,9 +51,9 @@
         {{-- ══════════════════════════════════════════════════════════════════════ --}}
         <div class="flex items-center justify-between gap-4 flex-wrap">
             <div class="flex items-center gap-3">
-                @if($fromClient)
+                @if ($fromClient)
                     <a href="{{ route('admin.hub.inventario', $fromClient) }}"
-                       class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium
+                        class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium
                               text-yellow-600 bg-white hover:bg-yellow-50 border border-yellow-200 rounded-lg transition">
                         <i class="ri-arrow-left-s-line text-base"></i> {{ $fromClient->name }}
                     </a>
@@ -303,9 +303,9 @@
                         {{ $vlanCount }} ACTIVO{{ $vlanCount !== 1 ? 'S' : '' }}
                     </span>
                 </div>
-                <button class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition">
+                {{-- <button class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition">
                     <i class="ri-settings-3-line"></i> Configurar
-                </button>
+                </button> --}}
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
@@ -478,13 +478,15 @@
         </div>
 
         {{-- ══════════════════════════════════════════════════════════════════════ --}}
-        {{-- ── PUERTOS ACTIVOS ── --}}
+        {{-- ── PUERTOS (FACEPLATE) ── --}}
         {{-- ══════════════════════════════════════════════════════════════════════ --}}
-        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+        <div>
+            <div class="flex items-center justify-between mb-3">
                 <div>
-                    <h3 class="font-semibold text-gray-700 text-sm">Detalle de Puertos Activos</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Monitoreo en tiempo real de interfaces (E + A)</p>
+                    <h3 class="font-semibold text-gray-700 text-sm">Detalle de Puertos</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        Clic en un puerto para ver su información y editar la descripción
+                    </p>
                 </div>
                 <span
                     class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold
@@ -493,65 +495,10 @@
                     LIVE STATUS
                 </span>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
-                        <tr>
-                            <th class="px-5 py-2.5 text-left">Puerto</th>
-                            <th class="px-5 py-2.5 text-left">Descripción</th>
-                            <th class="px-5 py-2.5 text-left">VLAN</th>
-                            <th class="px-5 py-2.5 text-left">Velocidad</th>
-                            <th class="px-5 py-2.5 text-left">Dúplex</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50">
-                        @forelse($switch->active_ports ?? [] as $port)
-                            <tr class="hover:bg-gray-50/60">
-                                <td class="px-5 py-2.5">
-                                    <span class="font-mono font-bold text-blue-600">{{ $port['port'] }}</span>
-                                </td>
-                                <td class="px-5 py-2.5 text-xs port-desc-cell cursor-pointer group/desc"
-                                    data-port="{{ $port['port'] }}" data-desc="{{ $port['display_string'] }}"
-                                    onclick="startEditDesc(this)" title="Clic para editar descripción">
-                                    <span
-                                        class="port-desc-text {{ $port['display_string'] ? 'text-gray-700' : 'text-gray-300 italic' }}">{{ $port['display_string'] ?: '—' }}</span>
-                                    <i
-                                        class="ri-pencil-line ml-1 text-gray-300 opacity-0 group-hover/desc:opacity-100 transition-opacity text-[11px]"></i>
-                                </td>
-                                <td class="px-5 py-2.5">
-                                    <span
-                                        class="font-mono text-xs text-gray-600">({{ $port['vlan_name'] ?? '—' }})</span>
-                                </td>
-                                <td class="px-5 py-2.5">
-                                    <div class="flex items-center gap-1.5">
-                                        <i class="ri-flashlight-line text-amber-400 text-xs"></i>
-                                        <span class="font-semibold text-gray-700 text-xs">
-                                            {{ $port['speed_actual'] }} Mbps
-                                        </span>
-                                        <span
-                                            class="px-1.5 py-0.5 text-xs font-bold bg-emerald-500 text-white rounded-full">
-                                            ONLINE
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="px-5 py-2.5">
-                                    <span
-                                        class="px-2 py-0.5 text-xs font-bold rounded
-                                                 {{ strtoupper($port['duplex_actual']) === 'FULL' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
-                                        {{ strtoupper($port['duplex_actual']) }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="5" class="px-5 py-8 text-center text-gray-400 text-sm">Sin puertos
-                                    activos</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            <div class="px-5 py-2.5 border-t border-gray-50 bg-gray-50/50 text-xs text-gray-400 text-center">
+
+            <x-switch-faceplate :device="$faceplateDevice" :ports="$faceplatePorts" :update-url="route('admin.switches.ports.description', $switch)" />
+
+            <div class="mt-3 text-xs text-gray-400 text-center">
                 <i class="ri-time-line mr-1"></i>
                 Última actualización sincronizada: {{ $switch->parsed_at?->diffForHumans() ?? 'hace un momento' }}
             </div>
@@ -697,83 +644,6 @@
                     dl.download = downloadName();
                     dl.classList.remove('hidden');
                 }
-            }
-            // ── Inline edit de descripción de puerto ──────────────────────
-            const descUpdateUrl = '{{ route('admin.switches.ports.description', $switch) }}';
-
-            function startEditDesc(td) {
-                if (td.querySelector('input')) return;
-                const currentDesc = td.dataset.desc || '';
-                const span = td.querySelector('.port-desc-text');
-                const pencil = td.querySelector('.ri-pencil-line');
-                if (span) span.style.display = 'none';
-                if (pencil) pencil.style.display = 'none';
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = currentDesc;
-                input.className =
-                    'text-xs border border-indigo-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400 min-w-[130px] w-full';
-                td.appendChild(input);
-                input.focus();
-                input.select();
-
-                async function saveDesc() {
-                    const newDesc = input.value.trim();
-                    if (newDesc === (td.dataset.desc || '')) {
-                        cancelEdit();
-                        return;
-                    }
-                    try {
-                        const res = await fetch(descUpdateUrl, {
-                            method: 'PATCH',
-                            headers: {
-                                'X-CSRF-TOKEN': csrfToken,
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                port: td.dataset.port,
-                                display_string: newDesc
-                            }),
-                        });
-                        const json = await res.json();
-                        if (!json.ok) throw new Error(json.error || 'Error');
-                        td.dataset.desc = newDesc;
-                        finishEdit(newDesc);
-                    } catch (err) {
-                        cancelEdit();
-                        console.error('Error guardando descripción:', err);
-                    }
-                }
-
-                function finishEdit(savedDesc) {
-                    input.remove();
-                    if (span) {
-                        span.textContent = savedDesc || '—';
-                        span.className = 'port-desc-text ' + (savedDesc ? 'text-gray-700' : 'text-gray-300 italic');
-                        span.style.display = '';
-                    }
-                    if (pencil) pencil.style.display = '';
-                }
-
-                function cancelEdit() {
-                    input.remove();
-                    if (span) span.style.display = '';
-                    if (pencil) pencil.style.display = '';
-                }
-
-                input.addEventListener('blur', saveDesc);
-                input.addEventListener('keydown', e => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        input.blur();
-                    }
-                    if (e.key === 'Escape') {
-                        input.removeEventListener('blur', saveDesc);
-                        cancelEdit();
-                    }
-                });
             }
         </script>
     @endpush

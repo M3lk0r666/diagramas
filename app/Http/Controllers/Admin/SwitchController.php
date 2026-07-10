@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Switche;
 use App\Models\UploadBatch;
+use App\Services\SwitchFaceplateService;
 use App\Services\TopologyBuilderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -39,10 +40,15 @@ class SwitchController extends Controller
     }
 
     // GET /switches/{switch} → detalle con todas las secciones
-    public function show(Switche $switch)
+    public function show(Switche $switch, SwitchFaceplateService $faceplate)
     {
         $switch->load('batch', 'outgoingConnections.dstSwitch', 'incomingConnections.srcSwitch');
-        return view('admin.switches.show', compact('switch'));
+
+        // Datos para <x-switch-faceplate> (todos los puertos con su estado real)
+        $faceplateDevice = $faceplate->device($switch);
+        $faceplatePorts  = $faceplate->ports($switch);
+
+        return view('admin.switches.show', compact('switch', 'faceplateDevice', 'faceplatePorts'));
     }
 
     // GET /switches/{switch}/ports-diagram → diagrama de puertos activos

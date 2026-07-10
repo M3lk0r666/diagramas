@@ -10,30 +10,38 @@ class SwitchPortController extends Controller
 {
     /**
      * PATCH /switches/{switch}/ports/description
-     * Updates display_string for a specific port entry in the active_ports JSON array.
+     *
+     * Guarda la descripción de un puerto:
+     *  - Si el puerto está en active_ports, actualiza su display_string
+     *    (compatibilidad con diagramas y vistas existentes).
+     *  - Siempre la persiste además en port_overrides, lo que permite
+     *    documentar también puertos sin link o deshabilitados.
      */
     public function updateDescription(Switche $switch, Request $request)
     {
         $portNum = (string) $request->input('port');
         $desc    = trim((string) $request->input('display_string', ''));
 
-        $ports = $switch->active_ports ?? [];
-        $found = false;
+        if ($portNum === '') {
+            return response()->json(['ok' => false, 'error' => 'Puerto no especificado'], 422);
+        }
 
+        // 1) Actualizar en active_ports si existe
+        $ports = $switch->active_ports ?? [];
         foreach ($ports as &$p) {
             if ((string) ($p['port'] ?? '') === $portNum) {
                 $p['display_string'] = $desc;
-                $found = true;
                 break;
             }
         }
         unset($p);
-
-        if (! $found) {
-            return response()->json(['ok' => false, 'error' => 'Puerto no encontrado'], 404);
-        }
-
         $switch->active_ports = $ports;
+
+        // 2) Persistir override (cubre puertos no activos)
+        $overrides = $switch->port_overrides ?? [];
+        $overrides[$portNum] = array_merge($overrides[$portNum] ?? [], ['description' => $desc]);
+        $switch->port_overrides = $overrides;
+
         $switch->save();
 
         return response()->json(['ok' => true, 'display_string' => $desc]);

@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\InventarioController;
 use App\Http\Controllers\Admin\ClientManagerController;
 use App\Http\Controllers\Admin\DiagramAssemblerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PortMappingController;
 use App\Http\Controllers\Admin\IsoTopologyController;
 use App\Http\Controllers\Admin\IsoIndexController;
 use App\Http\Controllers\Admin\IveController;
@@ -42,6 +43,7 @@ Route::get('/batches/{batch}', [FileUploadController::class, 'show'])->name('bat
 Route::get('/batches/{batch}/status', [FileUploadController::class, 'status'])->name('batches.status');
 
 // Switches
+Route::get('/switches-demo/faceplate', \App\Http\Controllers\Admin\SwitchFaceplateDemoController::class)->name('switches.faceplate.demo');
 Route::get('/switches', [SwitchController::class, 'index'])->name('switches.index');
 Route::get('/switches/{switch}', [SwitchController::class, 'show'])->name('switches.show');
 Route::get('/switches/{switch}/ports-diagram', [SwitchController::class, 'portsDiagram'])->name('switches.ports-diagram');
@@ -108,6 +110,18 @@ Route::get('/iso/{client}/{batch}', [IsoTopologyController::class, 'area'])->nam
 Route::get('/ive',                [IveController::class, 'index'])      ->name('ive.index');
 Route::get('/ive/{client}',       [IveController::class, 'global'])     ->name('ive.global');
 Route::get('/ive/{client}/data',  [IveController::class, 'dataGlobal']) ->name('ive.data.global');
+
+// ── Mapeo de Puertos ──────────────────────────────────────────────────────────
+// CRUD básico (index, create, show, store, update, destroy)
+// Los nombres quedan con prefijo admin. → admin.port-mapping.*
+Route::get('/port-mapping',                           [PortMappingController::class, 'index'])   ->name('port-mapping.index');
+Route::get('/port-mapping/create',                    [PortMappingController::class, 'create'])  ->name('port-mapping.create');
+Route::post('/port-mapping',                          [PortMappingController::class, 'store'])   ->name('port-mapping.store');
+Route::get('/port-mapping/{portMapping}',             [PortMappingController::class, 'show'])    ->name('port-mapping.show');
+Route::put('/port-mapping/{portMapping}',             [PortMappingController::class, 'update'])  ->name('port-mapping.update');
+Route::delete('/port-mapping/{portMapping}',          [PortMappingController::class, 'destroy']) ->name('port-mapping.destroy');
+// Punto de extensión: precargar estado desde análisis de switch existente
+Route::post('/port-mapping/preload-from-switch',      [PortMappingController::class, 'loadFromSwitchAnalysis'])->name('port-mapping.preload');
 
 // Diagrama exportado (PNG)
 Route::get('/batches/{batch}/diagram', [FileUploadController::class, 'diagram'])->name('batches.diagram');

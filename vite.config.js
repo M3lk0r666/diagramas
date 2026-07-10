@@ -25,6 +25,9 @@ export default defineConfig({
 
                 // ── Infrastructure Visualization Engine (IVE) ──────────
                 'resources/js/ive/main.jsx',
+
+                // ── Mapeo de Puertos ────────────────────────────────────
+                'resources/js/port-mapping.js',
             ],
             refresh: true,
         }),
