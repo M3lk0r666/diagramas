@@ -20,8 +20,23 @@
         </p>
     </div>
 
+    {{-- Aviso guía de archivos --}}
+    <div class="mb-4 flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3.5">
+        <div class="flex items-center gap-3 min-w-0">
+            <i class="ri-error-warning-line text-amber-500 text-xl shrink-0"></i>
+            <p class="text-sm text-amber-800">
+                <strong>Antes de subir</strong>, asegúrate de que el archivo tenga la estructura de secciones correcta.
+            </p>
+        </div>
+        <a href="{{ route('admin.guide.index') }}"
+           class="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition">
+            <i class="ri-file-list-3-line"></i>
+            Ver guía
+        </a>
+    </div>
+
     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-        <div class="max-w-4xl mx-auto py-8 px-4">
+        <div class="w-full py-8 px-6">
             {{-- Drop zone --}}
             <div id="drop-zone"
                 class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-12 bg-gray-50 dark:bg-gray-800 cursor-pointer hover:border-blue-400 transition-colors"

@@ -173,16 +173,18 @@
                                         <td class="px-4 py-2.5 text-center">
                                             @php
                                                 $roleIconMap = [
-                                                    'core' => 'core_switch.png',
+                                                    'core'     => 'core_switch.png',
                                                     'backbone' => 'backbone_switch.png',
-                                                    'dist' => 'dist_switch.png',
-                                                    'access' => 'access_switch.png',
+                                                    'dist'     => 'dist_switch.png',
+                                                    'access'   => 'access_switch.png',
+                                                    'stack'    => 'stack_switch.png',
                                                 ];
                                                 $roleLabels = [
-                                                    'core' => 'Core',
+                                                    'core'     => 'Core',
                                                     'backbone' => 'Backbone',
-                                                    'dist' => 'Dist',
-                                                    'access' => 'Access',
+                                                    'dist'     => 'Dist',
+                                                    'access'   => 'Access',
+                                                    'stack'    => 'Stack',
                                                 ];
                                                 $rIcon = $roleIconMap[$row['role']] ?? 'access_switch.png';
                                                 $rl = $roleLabels[$row['role']] ?? ucfirst($row['role']);

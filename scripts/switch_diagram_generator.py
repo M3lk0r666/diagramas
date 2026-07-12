@@ -158,19 +158,37 @@ def draw_header(ax, sw):
             ha='center', va='center', fontsize=9, color='#475569', zorder=2)
 
 
+def detect_center_icon(is_stacked, role):
+    """Return (filename, use_hw_size) for the center switch image."""
+    if is_stacked and role == 'core':
+        return 'core-stack.png', False
+    if is_stacked:
+        return 'switch-stack.png', False
+    if role == 'core':
+        return 'core.png', False
+    return None, True   # signal: use hw image fallback
+
+
 def draw_diagram(ax, sw, ports):
     # Initial axis limits (will be recomputed based on documented port count)
     ax.set_xlim(-1.45, 1.45)
     ax.set_ylim(-1.45, 1.45)
     ax.set_aspect('equal')
 
-    is_st     = sw.get('is_stacked', False)
-    role      = sw.get('role') or detect_role(sw.get('sys_name', ''))
-    hw_file   = detect_hw_icon(sw.get('system_type', ''))
-    role_file = ROLE_ICON.get('stack' if is_st else role, ROLE_ICON['access'])
+    is_st  = sw.get('is_stacked', False)
+    role   = sw.get('role') or detect_role(sw.get('sys_name', ''))
 
-    hw_arr   = load_img(hw_file)   if hw_file   else None
-    icon_arr = load_img(role_file, size=(120, 120))
+    center_file, use_hw = detect_center_icon(is_st, role)
+
+    if use_hw:
+        # Non-core, non-stack: prefer hardware photo (24p/48p), fall back to role icon
+        hw_file   = detect_hw_icon(sw.get('system_type', ''))
+        role_file = ROLE_ICON.get(role, ROLE_ICON['access'])
+        hw_arr    = load_img(hw_file)   if hw_file   else None
+        icon_arr  = load_img(role_file, size=(120, 120))
+    else:
+        hw_arr   = None
+        icon_arr = load_img(center_file, size=(120, 120))
 
     icon_top = 0.50
     if hw_arr is not None:
@@ -271,28 +289,20 @@ def _draw_port_node(ax, cx, cy, nx, ny, port):
         if nb_ip:
             lines.append(nb_ip)
 
-        icon_sz = 0.092                                    # display size in axes coords
-        box_h   = max(icon_sz + 0.030, 0.10 + 0.042 * (len(lines) - 1))
+        icon_sz = 0.092   # display size in axes coords
 
-        ax.add_patch(FancyBboxPatch(
-            (nx - box_w / 2, ny - box_h / 2), box_w, box_h,
-            boxstyle='round,pad=0.020',
-            linewidth=1.6, edgecolor=e_color, linestyle=ls_val,
-            facecolor='white', zorder=3,
-        ))
-
+        # No rectangle — just icon centered above, text label below
         if nb_icon is not None:
-            ix0 = nx - box_w / 2 + 0.010
             ax.imshow(nb_icon,
-                      extent=(ix0, ix0 + icon_sz,
-                               ny - icon_sz / 2, ny + icon_sz / 2),
+                      extent=(nx - icon_sz / 2, nx + icon_sz / 2,
+                               ny + 0.004, ny + 0.004 + icon_sz),
                       zorder=4, aspect='auto')
-            txt_x = ix0 + icon_sz + 0.008 + (box_w - icon_sz - 0.02) / 2
+            txt_y = ny + 0.002
         else:
-            txt_x = nx
+            txt_y = ny + icon_sz / 2
 
-        ax.text(txt_x, ny, '\n'.join(lines),
-                ha='center', va='center', fontsize=7,
+        ax.text(nx, txt_y, '\n'.join(lines),
+                ha='center', va='top', fontsize=7,
                 color='#1E293B', zorder=4, linespacing=1.3)
 
     else:

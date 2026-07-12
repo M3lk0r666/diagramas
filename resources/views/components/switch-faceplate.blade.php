@@ -86,46 +86,72 @@
 
     {{-- ── FACEPLATE(S): uno por slot ──────────────────────────────── --}}
     @foreach ($slots as $slot)
-        {{-- flex-wrap: si el panel SFP+ no cabe, baja a una segunda línea (nunca se encima) --}}
-        <div class="flex gap-3 items-stretch flex-wrap min-w-0">
+        {{-- Panel unificado: RJ45 + SFP en una sola tarjeta, sin gap interior --}}
+        <div class="bg-white border border-gray-200 rounded-xl p-4 pb-5 w-full min-w-0">
 
-            {{-- Panel principal (RJ45) --}}
-            <div class="bg-white border border-gray-200 rounded-xl p-4 pb-5 flex-1 min-w-0 basis-[620px]">
-                <div class="flex items-center gap-2 mb-3 text-sm">
-                    <span class="font-bold text-gray-800">{{ $device['model'] ?? 'Switch' }}</span>
-                    @if ($slot['label'])
-                        <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
-                            {{ $slot['label'] }}
-                        </span>
-                    @endif
+            {{-- Título del slot --}}
+            <div class="flex items-center gap-2 mb-3 text-sm">
+                <span class="font-bold text-gray-800">{{ $device['model'] ?? 'Switch' }}</span>
+                @if ($slot['label'])
+                    <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
+                        {{ $slot['label'] }}
+                    </span>
+                @endif
+            </div>
+
+            <div class="flex gap-6 min-w-0">
+
+                {{-- Columna Mgmt / Console --}}
+                <div class="flex flex-col gap-3.5 items-center pt-[18px] shrink-0">
+                    <div>
+                        <div class="text-[11px] text-gray-500 text-center mb-0.5">Mgmt</div>
+                        <div class="sw-jack sw-plain">&nbsp;</div>
+                    </div>
+                    <div>
+                        <div class="text-[11px] text-gray-500 text-center mb-0.5">Console</div>
+                        <div class="sw-jack sw-plain sw-flip">&nbsp;</div>
+                    </div>
                 </div>
 
-                {{-- todos los flex intermedios llevan min-w-0 para no anular el scroll interno --}}
-                <div class="flex gap-6 min-w-0">
+                {{-- Puertos RJ45 + SFP en la misma fila: RJ45 compactos, SFP anclado a la derecha --}}
+                <div class="flex gap-6 items-start flex-1 min-w-0 overflow-x-auto px-0.5 pt-1 pb-2.5">
 
-                    {{-- Columna Mgmt / Console --}}
-                    <div class="flex flex-col gap-3.5 items-center pt-[18px] shrink-0">
-                        <div>
-                            <div class="text-[11px] text-gray-500 text-center mb-0.5">Mgmt</div>
-                            <div class="sw-jack sw-plain">&nbsp;</div>
+                    {{-- Bloques RJ45 --}}
+                    @forelse ($slot['blocks'] as $block)
+                        <div class="flex gap-2 shrink-0">
+                            @foreach ($block as $col)
+                                <div class="flex flex-col items-center gap-1 shrink-0">
+                                    <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
+                                    @if ($col['top'])
+                                        <x-switch-faceplate-jack :port="$col['top']" />
+                                    @else
+                                        <div class="w-[34px] h-[32px] shrink-0"></div>
+                                    @endif
+                                    @if ($col['bottom'])
+                                        <x-switch-faceplate-jack :port="$col['bottom']" flip />
+                                    @else
+                                        <div class="w-[34px] h-[32px] shrink-0"></div>
+                                    @endif
+                                    <div class="sw-num">{{ $col['bottom']['number'] ?? '' }}</div>
+                                </div>
+                            @endforeach
                         </div>
-                        <div>
-                            <div class="text-[11px] text-gray-500 text-center mb-0.5">Console</div>
-                            <div class="sw-jack sw-plain sw-flip">&nbsp;</div>
-                        </div>
-                    </div>
+                    @empty
+                        <p class="text-xs text-gray-400 italic self-center">Sin puertos RJ45 en este slot</p>
+                    @endforelse
 
-                    {{-- Grid de puertos: scroll horizontal interno en pantallas angostas --}}
-                    <div class="flex gap-6 items-start flex-1 min-w-0 overflow-x-auto px-0.5 pt-1 pb-2.5">
-                        @forelse ($slot['blocks'] as $block)
-                            <div class="flex gap-2 shrink-0">
-                                @foreach ($block as $col)
+                    {{-- Sección SFP+: anclada al extremo derecho con ml-auto --}}
+                    @if (count($slot['sfp']))
+                        <div class="shrink-0 border-l border-gray-300 pl-5 ml-auto flex flex-col">
+                            <span class="inline-block border border-gray-300 rounded text-[10px] text-gray-500 px-2 py-0.5 mb-2 self-start">
+                                10GbE SFP+
+                            </span>
+                            <div class="flex gap-2">
+                                @foreach ($slot['sfp'] as $col)
                                     <div class="flex flex-col items-center gap-1 shrink-0">
                                         <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
                                         @if ($col['top'])
                                             <x-switch-faceplate-jack :port="$col['top']" />
-                                        @else
-                                            <div class="w-[34px] h-[32px] shrink-0"></div>
                                         @endif
                                         @if ($col['bottom'])
                                             <x-switch-faceplate-jack :port="$col['bottom']" flip />
@@ -136,37 +162,11 @@
                                     </div>
                                 @endforeach
                             </div>
-                        @empty
-                            <p class="text-xs text-gray-400 italic self-center">Sin puertos RJ45 en este slot</p>
-                        @endforelse
-                    </div>
+                        </div>
+                    @endif
+
                 </div>
             </div>
-
-            {{-- Panel SFP+ --}}
-            @if (count($slot['sfp']))
-                <div class="bg-white border border-gray-200 rounded-xl px-4 pt-3 pb-5 shrink-0 self-stretch">
-                    <span class="inline-block border border-gray-300 rounded text-[11px] text-gray-600 px-2 py-0.5 mb-3">
-                        10GbE SFP+
-                    </span>
-                    <div class="flex gap-2 shrink-0">
-                        @foreach ($slot['sfp'] as $col)
-                            <div class="flex flex-col items-center gap-1 shrink-0">
-                                <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
-                                @if ($col['top'])
-                                    <x-switch-faceplate-jack :port="$col['top']" />
-                                @endif
-                                @if ($col['bottom'])
-                                    <x-switch-faceplate-jack :port="$col['bottom']" flip />
-                                @else
-                                    <div class="w-[34px] h-[32px] shrink-0"></div>
-                                @endif
-                                <div class="sw-num">{{ $col['bottom']['number'] ?? '' }}</div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </div>
     @endforeach
 

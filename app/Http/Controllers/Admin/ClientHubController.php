@@ -17,7 +17,7 @@ class ClientHubController extends Controller
     public function index()
     {
         $clients = Client::with([
-            'batches' => fn ($q) => $q->withCount('switches')->select('id', 'client_id', 'name', 'status'),
+            'batches' => fn ($q) => $q->select('id', 'client_id', 'name', 'status')->withCount('switches'),
         ])
         ->orderBy('name')
         ->get();
@@ -72,7 +72,7 @@ class ClientHubController extends Controller
                 'firmware'      => $s->firmware_version ?? '—',
                 'default_route' => $defaultRoute['gateway'] ?? '—',
                 'is_stacked'    => (bool) $s->is_stacked,
-                'role'          => TopologyBuilderService::detectRoleStatic($s->sys_name ?? ''),
+                'role'          => $s->is_stacked ? 'stack' : TopologyBuilderService::detectRoleStatic($s->sys_name ?? ''),
                 'batch_id'      => $s->upload_batch_id,
                 'batch_name'    => $s->batch?->name ?? '—',
                 'client_id'     => $client->id,

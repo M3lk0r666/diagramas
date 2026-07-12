@@ -25,6 +25,12 @@
             'header' => 'UPLOADS',
         ],
         [
+            'name' => 'Guía de Archivos',
+            'icon' => 'ri-file-list-3-line',
+            'href' => route('admin.guide.index'),
+            'active' => request()->routeIs('admin.guide.*'),
+        ],
+        [
             'name' => 'Subir Archivos',
             'icon' => 'ri-upload-2-line',
             'href' => route('admin.client.upload'),

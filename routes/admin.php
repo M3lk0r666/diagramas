@@ -36,6 +36,9 @@ Route::get('/clientes-manager/{client}/batches/{batch}', [ClientManagerControlle
 Route::delete('/clientes-manager/{client}/batches/{batch}', [ClientManagerController::class, 'destroyBatch']) ->name('clients.manage.batch.destroy');
 Route::delete('/clientes-manager/{client}/batches/{batch}/switches/{switch}', [ClientManagerController::class, 'destroySwitch'])->name('clients.manage.switch.destroy');
 
+// Guía de archivos
+Route::get('/guia-archivos', fn () => view('admin.guide.index'))->name('guide.index');
+
 // Carga de archivos
 Route::get('/client/subir', [FileUploadController::class, 'index'])->name('client.upload');
 Route::post('/upload', [FileUploadController::class, 'store'])->name('upload.store');

@@ -44,7 +44,7 @@
         $roleLabel = $roleLabelMap[$swRole] ?? ucfirst($swRole);
     @endphp
 
-    <div class="space-y-5 max-w-7xl mx-auto">
+    <div class="space-y-5 w-full">
 
         {{-- ══════════════════════════════════════════════════════════════════════ --}}
         {{-- ── HEADER BAR ── --}}
@@ -314,7 +314,7 @@
                             <th class="px-5 py-2.5 text-left">Nombre</th>
                             <th class="px-5 py-2.5 text-left">VID</th>
                             <th class="px-5 py-2.5 text-left">IP / Máscara</th>
-                            <th class="px-5 py-2.5 text-center">Estado</th>
+                            <th class="px-5 py-2.5 text-left">Flags</th>
                             <th class="px-5 py-2.5 text-center">Puertos</th>
                             <th class="px-5 py-2.5 text-left">VR</th>
                         </tr>
@@ -325,6 +325,7 @@
                                 $portsActive = $vlan['ports_active'] ?? '0';
                                 $portNum = (int) $portsActive;
                                 $vOnline = $portNum > 0 || in_array('A', $vlan['flags_active'] ?? []);
+                                $flagsStr = implode(' ', $vlan['flags_active'] ?? []);
                             @endphp
                             <tr class="hover:bg-gray-50/60">
                                 <td class="px-5 py-2.5 font-semibold text-gray-800">{{ $vlan['name'] }}</td>
@@ -336,16 +337,11 @@
                                         <span class="text-gray-300">—</span>
                                     @endif
                                 </td>
-                                <td class="px-5 py-2.5 text-center">
-                                    <span
-                                        class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-full
-                                                 {{ $vOnline ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white' }}">
-                                        {{ $vOnline ? 'ONLINE' : 'OFFLINE' }}
-                                    </span>
+                                <td class="px-5 py-2.5 font-mono text-xs text-gray-600">
+                                    {{ $flagsStr ?: '—' }}
                                 </td>
                                 <td class="px-5 py-2.5 text-center">
-                                    <span
-                                        class="text-xs font-semibold {{ $vOnline ? 'text-emerald-600' : 'text-red-500' }}">
+                                    <span class="text-xs font-semibold {{ $vOnline ? 'text-emerald-600' : 'text-red-500' }}">
                                         {{ $portsActive }}
                                     </span>
                                 </td>
