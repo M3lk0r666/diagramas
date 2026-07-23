@@ -268,6 +268,71 @@ class AreaTopologyController extends Controller
             }
         }
 
+        // ── Resolución on-the-fly: conexiones no resueltas (dst_switch_id = null) ──────────
+        // El global view usa whereIn(dst_switch_id) que excluye NULLs.
+        // Aquí las emparejamos por neighbor_name o dst_mac contra los switches del cliente.
+        $nameMap = [];
+        $macMap  = [];
+        foreach ($batches as $batch) {
+            foreach ($batch->switches as $s) {
+                if ($s->sys_name) {
+                    $nameMap[strtolower(trim($s->sys_name))] = $s->id;
+                }
+                if ($s->system_mac) {
+                    $normalKey = strtolower(preg_replace('/[^a-f0-9]/i', '', $s->system_mac));
+                    if ($normalKey) $macMap[$normalKey] = $s->id;
+                }
+            }
+        }
+
+        $unresolvedConns = SwitcheConnection::whereIn('src_switch_id', $allSwitchIds)
+            ->whereNull('dst_switch_id')
+            ->get(['src_switch_id', 'src_port', 'dst_mac', 'dst_port', 'neighbor_name']);
+
+        foreach ($unresolvedConns as $c) {
+            // Intentar match por nombre, luego por MAC
+            $resolvedDstId = null;
+            if ($c->neighbor_name) {
+                $resolvedDstId = $nameMap[strtolower(trim($c->neighbor_name))] ?? null;
+            }
+            if (!$resolvedDstId && $c->dst_mac) {
+                $normalMac     = strtolower(preg_replace('/[^a-f0-9]/i', '', $c->dst_mac));
+                $resolvedDstId = $macMap[$normalMac] ?? null;
+            }
+
+            // Ignorar si no se resolvió o es el mismo switch origen
+            if (!$resolvedDstId || $resolvedDstId === $c->src_switch_id) continue;
+
+            $from = $this->resolveNodeId($c->src_switch_id, $c->src_port, $primaryNode, $memberNodeOf);
+            $to   = $this->resolveNodeId($resolvedDstId,    $c->dst_port, $primaryNode, $memberNodeOf);
+            if (!$from || !$to) continue;
+
+            $key       = $from < $to ? "{$from}|{$to}" : "{$to}|{$from}";
+            $srcBatch  = $switchBatch[$c->src_switch_id] ?? null;
+            $dstBatch  = $switchBatch[$resolvedDstId]    ?? null;
+            $interArea = $srcBatch !== $dstBatch;
+
+            if (!array_key_exists($key, $seen)) {
+                $seen[$key] = count($allEdges);
+                $allEdges[] = [
+                    'from'       => $from,
+                    'to'         => $to,
+                    'label'      => "{$c->src_port}↔{$c->dst_port}",
+                    'inter_area' => $interArea,
+                    'color'      => $interArea
+                        ? ['color' => '#F97316', 'highlight' => '#EA580C', 'hover' => '#EA580C']
+                        : ['color' => '#94A3B8', 'highlight' => '#3B82F6', 'hover' => '#3B82F6'],
+                    'width'      => $interArea ? 2.5 : 1.5,
+                    'dashes'     => $interArea ? [8, 4] : false,
+                ];
+            } else {
+                $label = "{$c->src_port}↔{$c->dst_port}";
+                if (!str_contains($allEdges[$seen[$key]]['label'], $label)) {
+                    $allEdges[$seen[$key]]['label'] .= "\n" . $label;
+                }
+            }
+        }
+
         // Metadata de batches para JS (mismo índice de color que los nodos)
         $batchesMeta = $batches->map(fn ($b) => [
             'id'         => $b->id,

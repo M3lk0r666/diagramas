@@ -1,25 +1,34 @@
 <x-admin-layout
     title="Diagrama Global · {{ $client->name }} | Diagramas"
-    :breadcrumbs="[
-        ['name' => 'Dashboard',   'href' => route('dashboard')],
-        ['name' => 'Áreas',       'href' => route('admin.areas.index')],
-        ['name' => $client->name, 'href' => route('admin.areas.client', $client)],
-        ['name' => 'Diagrama global'],
-    ]">
+    :breadcrumbs="[]">
 
-    <div class="flex flex-col -mx-4 sm:-mx-6 lg:-mx-8" style="height: calc(100vh - 130px);">
+    <div class="fixed flex flex-col top-14 left-0 right-0 bottom-0 lg:left-64" style="z-index:10;">
 
         {{-- ── Barra superior ── --}}
-        <div class="flex items-center justify-between px-5 py-2.5 bg-white border-b border-gray-200 shrink-0 gap-3 flex-wrap">
-            <div class="flex items-center gap-2.5">
-                <span class="font-semibold text-gray-800 text-sm">{{ $client->name }}</span>
-                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                    {{ $batches->count() }} áreas · {{ $nodes->count() }} switches
+        <div class="relative flex items-center px-4 py-2 bg-white border-b border-gray-200 shrink-0">
+
+            {{-- Izquierda: navegación --}}
+            <a href="{{ route('admin.areas.client', $client) }}"
+               class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-500
+                      hover:text-gray-700 hover:bg-gray-100 rounded-lg transition shrink-0">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Áreas
+            </a>
+
+            {{-- Centro: nombre del cliente (posicionado absolutamente para estar centrado de verdad) --}}
+            <div class="absolute inset-x-0 flex flex-col items-center justify-center pointer-events-none">
+                <span class="font-bold text-gray-900 text-base leading-tight">{{ $client->name }}</span>
+                <span class="text-xs text-gray-400 mt-0.5">
+                    {{ $batches->count() }} áreas &middot; {{ $nodes->count() }} switches
                 </span>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
+
+            {{-- Derecha: controles --}}
+            <div class="ml-auto flex items-center gap-1.5 shrink-0">
                 <button id="btn-expand-all"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600
                            bg-gray-100 hover:bg-gray-200 rounded-lg transition">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m16-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
@@ -27,7 +36,7 @@
                     Expandir todo
                 </button>
                 <button id="btn-collapse-all"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600
                            bg-gray-100 hover:bg-gray-200 rounded-lg transition">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/>
@@ -35,18 +44,13 @@
                     Colapsar todo
                 </button>
                 <button id="btn-fit"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600
                            bg-gray-100 hover:bg-gray-200 rounded-lg transition">
                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                     </svg>
                     Ajustar vista
                 </button>
-                <a href="{{ route('admin.areas.client', $client) }}"
-                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600
-                          bg-gray-100 hover:bg-gray-200 rounded-lg transition">
-                    ← Áreas
-                </a>
             </div>
         </div>
 
@@ -57,23 +61,25 @@
             <div class="relative bg-gray-50 border-r border-gray-200 flex-1 min-w-0">
                 <div id="global-network" class="w-full h-full"></div>
 
-                {{-- Leyenda --}}
-                <div class="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200
-                            shadow-sm px-3 py-2.5 text-xs text-gray-600 pointer-events-none" style="min-width:170px">
-                    <div class="font-semibold text-gray-700 mb-2">Iconos</div>
-                    <div class="space-y-1 mb-3">
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'core_switch.png') }}"     class="w-5 h-5 object-contain" alt=""> Core</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'backbone_switch.png') }}" class="w-5 h-5 object-contain" alt=""> Backbone</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'dist_switch.png') }}"     class="w-5 h-5 object-contain" alt=""> Distribución</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'access_switch.png') }}"   class="w-5 h-5 object-contain" alt=""> Acceso</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'stack_switch.png') }}"    class="w-5 h-5 object-contain" alt=""> Stack</div>
+                {{-- Leyenda siempre visible (compacta) --}}
+                <div class="absolute bottom-3 left-3 z-10 bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200
+                            shadow-sm px-3 py-2 text-xs text-gray-600 pointer-events-none" style="min-width:200px">
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
+                        <div class="col-span-2 font-semibold text-gray-700 mb-1 text-[11px] uppercase tracking-wide">Iconos</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'core_switch.png') }}"     class="w-4 h-4 object-contain" alt=""> Core</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'backbone_switch.png') }}" class="w-4 h-4 object-contain" alt=""> Backbone</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'dist_switch.png') }}"     class="w-4 h-4 object-contain" alt=""> Distribución</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'access_switch.png') }}"   class="w-4 h-4 object-contain" alt=""> Acceso</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'stack_switch.png') }}"    class="w-4 h-4 object-contain" alt=""> Stack</div>
                     </div>
-                    <div class="font-semibold text-gray-700 mb-2 pt-2 border-t border-gray-100">Conexiones</div>
-                    <div class="flex items-center gap-2">
-                        <span class="inline-block w-7" style="border-top: 2px solid #94A3B8"></span> Intra-área
-                    </div>
-                    <div class="flex items-center gap-2 mt-1">
-                        <span class="inline-block w-7" style="border-top: 2.5px dashed #F97316"></span> Inter-área
+                    <div class="pt-1.5 border-t border-gray-100 space-y-0.5">
+                        <div class="font-semibold text-gray-700 mb-1 text-[11px] uppercase tracking-wide">Conexiones</div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-6 shrink-0" style="border-top:2px solid #94A3B8"></span> Intra-área
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-6 shrink-0" style="border-top:2.5px dashed #F97316"></span> Inter-área
+                        </div>
                     </div>
                 </div>
 
@@ -265,7 +271,7 @@
                 dashes: e.dashes || false,
                 arrows: { to: false },
                 color:  e.color || { color: '#94A3B8', highlight: '#3B82F6', hover: '#3B82F6' },
-                font:   { size: 7, align: 'middle', color: '#6B7280', strokeWidth: 0 },
+                font:   { size: 8, align: 'middle', color: '#374151', background: 'white', strokeWidth: 2, strokeColor: 'white' },
                 width:  e.width || 1.5,
                 smooth: { type: 'dynamic' },
             };
@@ -280,7 +286,7 @@
                 dashes: [8, 4],
                 arrows: { to: false },
                 color:  { color: '#F97316', highlight: '#EA580C', hover: '#EA580C' },
-                font:   { size: 7, align: 'middle', color: '#F97316', strokeWidth: 0 },
+                font:   { size: 8, align: 'middle', color: '#7c2d12', background: 'white', strokeWidth: 2, strokeColor: 'white' },
                 width:  2.5,
                 smooth: { type: 'dynamic' },
             };
@@ -440,7 +446,7 @@
                             dashes: [8, 4],
                             arrows: { to: false },
                             color:  { color: '#F97316', highlight: '#EA580C', hover: '#EA580C' },
-                            font:   { size: 7, align: 'middle', color: '#F97316', strokeWidth: 0 },
+                            font:   { size: 8, align: 'middle', color: '#7c2d12', background: 'white', strokeWidth: 2, strokeColor: 'white' },
                             width:  2.5,
                             smooth: { type: 'dynamic' },
                         });
@@ -569,7 +575,7 @@
             setTimeout(() => network.fit({ animation: { duration: 500 } }), 700);
         });
 
-        document.getElementById('btn-fit').addEventListener('click', () =>
+document.getElementById('btn-fit').addEventListener('click', () =>
             network.fit({ animation: { duration: 600, easingFunction: 'easeInOutQuad' } }));
 
     })();

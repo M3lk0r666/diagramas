@@ -283,20 +283,42 @@ function setPortState(p, side, unit, newSt) {
   if (p.state === 'reassigned') removeMapping(p, side);
   if (side === 'o') clearAutoMirror(unit, p.local);
   p.state = newSt;
-  // Espejo automático: origen activo (cobre) → mismo puerto en destino
-  if (side === 'o' && newSt === 'active' && p.kind === 'cu') {
-    const destLocal = unit * state.origin.copperPerUnit + p.local;
-    const d = state.dest.ports[idxOf(state.dest.ports, destLocal)];
-    if (d && d.kind === 'cu' && d.state === 'unset') { d.state = 'active'; d.auto = true; }
+  if (side === 'o' && newSt === 'active') {
+    // Espejo automático cobre: origen → mismo local en destino
+    if (p.kind === 'cu') {
+      const destLocal = unit * state.origin.copperPerUnit + p.local;
+      const d = state.dest.ports[idxOf(state.dest.ports, destLocal)];
+      if (d && d.kind === 'cu' && d.state === 'unset') { d.state = 'active'; d.auto = true; }
+    }
+    // Espejo automático SFP: origen → mismo índice de fibra en destino
+    if (p.kind === 'sfp') {
+      const fiberIdx  = p.local - state.origin.copperPerUnit; // 1-based
+      const destLocal = state.dest.copper + fiberIdx;
+      const d = state.dest.ports[idxOf(state.dest.ports, destLocal)];
+      if (d && d.kind === 'sfp' && d.state === 'unset') { d.state = 'active'; d.auto = true; }
+    }
   }
   closePopover();
   renderAll();
 }
 
 function clearAutoMirror(unit, local) {
-  const destLocal = unit * state.origin.copperPerUnit + local;
-  const d = state.dest.ports[idxOf(state.dest.ports, destLocal)];
-  if (d && d.auto) { d.state = 'unset'; d.auto = false; }
+  // Limpiar espejo cobre
+  const destLocalCu = unit * state.origin.copperPerUnit + local;
+  const dCu = state.dest.ports[idxOf(state.dest.ports, destLocalCu)];
+  if (dCu && dCu.auto) { dCu.state = 'unset'; dCu.auto = false; }
+
+  // Limpiar espejo SFP (por índice de fibra)
+  const srcArr  = state.origin.ports[unit];
+  const srcPort = srcArr ? srcArr[idxOf(srcArr, local)] : null;
+  if (srcPort && srcPort.kind === 'sfp') {
+    const fiberIdx     = local - state.origin.copperPerUnit;
+    const destLocalSfp = state.dest.copper + fiberIdx;
+    if (destLocalSfp !== destLocalCu) {          // evitar limpiar dos veces el mismo puerto
+      const dSfp = state.dest.ports[idxOf(state.dest.ports, destLocalSfp)];
+      if (dSfp && dSfp.auto) { dSfp.state = 'unset'; dSfp.auto = false; }
+    }
+  }
 }
 
 function removeMapping(p, side) {

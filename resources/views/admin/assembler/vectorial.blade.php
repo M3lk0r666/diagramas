@@ -140,6 +140,7 @@ canvas{position:absolute;top:0;left:0}
     <button class="tb-btn" id="btn-fit"><i class="ri-fullscreen-line"></i> Ajustar</button>
     <button class="tb-btn" id="btn-undo"><i class="ri-arrow-go-back-line"></i></button>
     <button class="tb-btn" id="btn-redo"><i class="ri-arrow-go-forward-line"></i></button>
+    <button class="tb-btn" id="btn-delete" title="Eliminar selección (Supr)" style="color:#EF4444"><i class="ri-delete-bin-line"></i> Eliminar</button>
     <div class="sep"></div>
     <button class="tb-btn" id="btn-save"><i class="ri-save-line"></i> Guardar</button>
     <div class="tb-spacer"></div>
@@ -411,17 +412,20 @@ function createSwitchNode(node,x,y){
         const ipDisplay=(node.ip||'').split('/')[0];
 
         const buildGrp=img=>{
-            // Icono centrado, ligeramente hacia arriba
-            const imgObj=img||(new fabric.Rect({width:48,height:48,fill:'transparent'}));
-            imgObj.set({left:0,top:-12,originX:'center',originY:'center'});
-            // Nombre debajo del icono
-            const lbl=new fabric.Text(display,{left:0,top:14,fontSize:10,fontFamily:'Arial',fill:'#1E293B',textAlign:'center',originX:'center',originY:'top',fontWeight:'700'});
+            // Escalar icono a tamaño fijo máximo
+            const MAX=80;
+            const imgObj=img||(new fabric.Rect({width:MAX,height:MAX,fill:'transparent'}));
+            let dispW=MAX,dispH=MAX;
+            if(img){const s=Math.min(MAX/(img.width||MAX),MAX/(img.height||MAX));img.scale(s);dispW=(img.width||MAX)*s;dispH=(img.height||MAX)*s;}
+            imgObj.set({left:0,top:0,originX:'center',originY:'center'});
+            // Nombre justo debajo del ícono
+            const lbl=new fabric.Text(display,{left:0,top:dispH/2+5,fontSize:10,fontFamily:'Arial',fill:'#1E293B',textAlign:'center',originX:'center',originY:'top',fontWeight:'700',backgroundColor:'rgba(255,255,255,0.85)',padding:1});
             lbl.__isNodeLabel=true;
             // IP debajo del nombre
-            const ipLbl=new fabric.Text(ipDisplay,{left:0,top:26,fontSize:9,fontFamily:'Arial',fill:'#64748B',textAlign:'center',originX:'center',originY:'top',opacity:ipDisplay?1:0});
+            const ipLbl=new fabric.Text(ipDisplay,{left:0,top:dispH/2+19,fontSize:9,fontFamily:'Arial',fill:'#475569',textAlign:'center',originX:'center',originY:'top',opacity:ipDisplay?1:0,backgroundColor:'rgba(255,255,255,0.85)',padding:1});
             ipLbl.__isNodeIp=true;
-            // Punto de rol (esquina superior derecha del icono)
-            const dot=new fabric.Circle({left:22,top:-34,radius:4,fill:color,originX:'center',originY:'center',stroke:'#fff',strokeWidth:1.5});
+            // Punto de rol (esquina superior derecha del ícono)
+            const dot=new fabric.Circle({left:dispW/2,top:-dispH/2,radius:4,fill:color,originX:'center',originY:'center',stroke:'#fff',strokeWidth:1.5});
             const grp=new fabric.Group([imgObj,lbl,ipLbl,dot],{left:x,top:y,originX:'center',originY:'center',hasControls:false,hasBorders:true,borderColor:'#3B82F6',borderScaleFactor:2,cornerColor:'#3B82F6',cornerSize:6,transparentCorners:false,padding:6,__nodeId:node.id,__nodeData:node});
             canvas.add(grp);placedNodes[node.id]=grp;resolve(grp);
         };
@@ -662,6 +666,11 @@ function updateStats(){const n=Object.keys(placedNodes).length,e=connObjects.len
 
 /* ── Misc ── */
 document.getElementById('btn-save').addEventListener('click',saveNow);
+document.getElementById('btn-delete').addEventListener('click',()=>{
+    const active=canvas.getActiveObjects();if(!active.length)return;
+    active.forEach(obj=>{if(obj.__nodeId)delete placedNodes[obj.__nodeId];if(obj.__edgeId){if(obj.__portLabel)canvas.remove(obj.__portLabel);connObjects=connObjects.filter(c=>c!==obj);}canvas.remove(obj);});
+    canvas.discardActiveObject();canvas.requestRenderAll();updateStats();schedAutoSave();pushHistory();
+});
 document.getElementById('btn-shortcuts').addEventListener('click',()=>{const o=document.getElementById('shortcuts-overlay');o.style.display=o.style.display==='flex'?'none':'flex';});
 document.getElementById('shortcuts-overlay').addEventListener('click',function(e){if(e.target===this)this.style.display='none';});
 

@@ -53,8 +53,31 @@
                         <td class="px-4 py-3 text-gray-500 font-mono text-xs">
                             {{ $m->ip ?: '—' }}
                         </td>
-                        <td class="px-4 py-3 text-gray-600 text-xs">{{ $m->origin_summary }}</td>
-                        <td class="px-4 py-3 text-gray-600 text-xs">{{ $m->dest_summary }}</td>
+                        <td class="px-4 py-3 text-xs leading-5">
+                            @php
+                                $oc = $m->origin_config ?? [];
+                                $oSerials = array_values(array_filter($oc['serials'] ?? []));
+                            @endphp
+                            <span class="text-gray-600">{{ $m->origin_summary }}</span>
+                            @if(!empty($oc['model']))
+                                <div class="text-gray-400">{{ $oc['model'] }}</div>
+                            @endif
+                            @foreach($oSerials as $i => $s)
+                                <div class="font-mono text-gray-400 text-[11px]">
+                                    <span class="text-gray-300">S{{ $i + 1 }}:</span> {{ $s }}
+                                </div>
+                            @endforeach
+                        </td>
+                        <td class="px-4 py-3 text-xs leading-5">
+                            @php $dc = $m->dest_config ?? []; @endphp
+                            <span class="text-gray-600">{{ $m->dest_summary }}</span>
+                            @if(!empty($dc['model']))
+                                <div class="text-gray-400">{{ $dc['model'] }}</div>
+                            @endif
+                            @if(!empty($dc['serial']))
+                                <div class="font-mono text-gray-400 text-[11px]">{{ $dc['serial'] }}</div>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-gray-400 text-xs">
                             {{ $m->updated_at->diffForHumans() }}
                         </td>

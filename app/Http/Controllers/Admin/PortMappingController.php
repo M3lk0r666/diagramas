@@ -8,6 +8,7 @@ use App\Models\PortMapping;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class PortMappingController extends Controller
@@ -37,7 +38,7 @@ class PortMappingController extends Controller
 
     public function show(PortMapping $portMapping): View
     {
-        $this->authorize('view', $portMapping);
+        Gate::authorize('view', $portMapping);
 
         $portMappingJson = json_encode([
             'id'            => $portMapping->id,
@@ -71,7 +72,7 @@ class PortMappingController extends Controller
 
     public function update(StorePortMappingRequest $request, PortMapping $portMapping): JsonResponse
     {
-        $this->authorize('update', $portMapping);
+        Gate::authorize('update', $portMapping);
 
         $portMapping->update([
             'name'          => $request->name,
@@ -88,7 +89,7 @@ class PortMappingController extends Controller
 
     public function destroy(PortMapping $portMapping): RedirectResponse
     {
-        $this->authorize('delete', $portMapping);
+        Gate::authorize('delete', $portMapping);
 
         $portMapping->delete();
 

@@ -295,67 +295,69 @@
         {{-- ══════════════════════════════════════════════════════════════════════ --}}
         {{-- ── VLANs ── --}}
         {{-- ══════════════════════════════════════════════════════════════════════ --}}
-        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden" data-section>
             <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h3 class="font-semibold text-gray-700 text-sm">VLANs</h3>
+                <button type="button" data-section-toggle
+                        class="flex items-center gap-2 select-none cursor-pointer group">
+                    <i class="ri-arrow-right-s-line text-gray-400 text-lg transition-transform duration-200" data-section-chevron></i>
+                    <h3 class="font-semibold text-gray-700 text-sm group-hover:text-gray-900">VLANs</h3>
                     <span class="text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
                         {{ $vlanCount }} ACTIVO{{ $vlanCount !== 1 ? 'S' : '' }}
                     </span>
-                </div>
-                {{-- <button class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition">
-                    <i class="ri-settings-3-line"></i> Configurar
-                </button> --}}
+                </button>
+                <input type="text" placeholder="Filtrar VLANs…" data-section-search
+                       class="hidden text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600
+                              placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-200 w-52">
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
-                        <tr>
-                            <th class="px-5 py-2.5 text-left">Nombre</th>
-                            <th class="px-5 py-2.5 text-left">VID</th>
-                            <th class="px-5 py-2.5 text-left">IP / Máscara</th>
-                            <th class="px-5 py-2.5 text-left">Flags</th>
-                            <th class="px-5 py-2.5 text-center">Puertos</th>
-                            <th class="px-5 py-2.5 text-left">VR</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50">
-                        @forelse($switch->vlans ?? [] as $vlan)
-                            @php
-                                $portsActive = $vlan['ports_active'] ?? '0';
-                                $portNum = (int) $portsActive;
-                                $vOnline = $portNum > 0 || in_array('A', $vlan['flags_active'] ?? []);
-                                $flagsStr = implode(' ', $vlan['flags_active'] ?? []);
-                            @endphp
-                            <tr class="hover:bg-gray-50/60">
-                                <td class="px-5 py-2.5 font-semibold text-gray-800">{{ $vlan['name'] }}</td>
-                                <td class="px-5 py-2.5 font-mono text-xs text-gray-500">{{ $vlan['vid'] }}</td>
-                                <td class="px-5 py-2.5 font-mono text-xs">
-                                    @if (!empty($vlan['protocol_addr']))
-                                        <span class="text-blue-600">{{ $vlan['protocol_addr'] }}</span>
-                                    @else
-                                        <span class="text-gray-300">—</span>
-                                    @endif
-                                </td>
-                                <td class="px-5 py-2.5 font-mono text-xs text-gray-600">
-                                    {{ $flagsStr ?: '—' }}
-                                </td>
-                                <td class="px-5 py-2.5 text-center">
-                                    <span class="text-xs font-semibold {{ $vOnline ? 'text-emerald-600' : 'text-red-500' }}">
-                                        {{ $portsActive }}
-                                    </span>
-                                </td>
-                                <td class="px-5 py-2.5 text-xs text-gray-400">{{ $vlan['virtual_router'] ?? '—' }}
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="px-5 py-8 text-center text-gray-400 text-sm">Sin VLANs
-                                    registradas</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div class="sw-collapse-body" data-section-body>
+                <div class="sw-collapse-inner">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                                <tr>
+                                    <th class="px-5 py-2.5 text-left">Nombre</th>
+                                    <th class="px-5 py-2.5 text-left">VID</th>
+                                    <th class="px-5 py-2.5 text-left">IP / Máscara</th>
+                                    <th class="px-5 py-2.5 text-left">Flags</th>
+                                    <th class="px-5 py-2.5 text-center">Puertos</th>
+                                    <th class="px-5 py-2.5 text-left">VR</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                @forelse($switch->vlans ?? [] as $vlan)
+                                    @php
+                                        $portsActive = $vlan['ports_active'] ?? '0';
+                                        $portNum = (int) $portsActive;
+                                        $vOnline = $portNum > 0 || in_array('A', $vlan['flags_active'] ?? []);
+                                        $flagsStr = implode(' ', $vlan['flags_active'] ?? []);
+                                    @endphp
+                                    <tr class="hover:bg-gray-50/60">
+                                        <td class="px-5 py-2.5 font-semibold text-gray-800">{{ $vlan['name'] }}</td>
+                                        <td class="px-5 py-2.5 font-mono text-xs text-gray-500">{{ $vlan['vid'] }}</td>
+                                        <td class="px-5 py-2.5 font-mono text-xs">
+                                            @if (!empty($vlan['protocol_addr']))
+                                                <span class="text-blue-600">{{ $vlan['protocol_addr'] }}</span>
+                                            @else
+                                                <span class="text-gray-300">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-2.5 font-mono text-xs text-gray-600">{{ $flagsStr ?: '—' }}</td>
+                                        <td class="px-5 py-2.5 text-center">
+                                            <span class="text-xs font-semibold {{ $vOnline ? 'text-emerald-600' : 'text-red-500' }}">
+                                                {{ $portsActive }}
+                                            </span>
+                                        </td>
+                                        <td class="px-5 py-2.5 text-xs text-gray-400">{{ $vlan['virtual_router'] ?? '—' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="px-5 py-8 text-center text-gray-400 text-sm">Sin VLANs registradas</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -365,110 +367,126 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
             {{-- Rutas IP --}}
-            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                    <i class="ri-route-line text-indigo-400"></i>
-                    <h3 class="font-semibold text-gray-700 text-sm">Rutas IP ({{ $routeCount }})</h3>
+            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden" data-section>
+                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                    <button type="button" data-section-toggle
+                            class="flex items-center gap-2 select-none cursor-pointer group">
+                        <i class="ri-arrow-right-s-line text-gray-400 text-lg transition-transform duration-200" data-section-chevron></i>
+                        <i class="ri-route-line text-indigo-400"></i>
+                        <h3 class="font-semibold text-gray-700 text-sm group-hover:text-gray-900">Rutas IP</h3>
+                        <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">
+                            {{ $routeCount }}
+                        </span>
+                    </button>
+                    <input type="text" placeholder="Filtrar rutas…" data-section-search
+                           class="hidden text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600
+                                  placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-200 w-52">
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
-                            <tr>
-                                <th class="px-5 py-2.5 text-left">Destino</th>
-                                <th class="px-5 py-2.5 text-left">Gateway</th>
-                                <th class="px-5 py-2.5 text-left">VLAN</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-50">
-                            @forelse($switch->ip_routes ?? [] as $route)
-                                @php
-                                    $oriColors = [
-                                        '#S' => 'bg-blue-100 text-blue-700',
-                                        '#D' => 'bg-violet-100 text-violet-700',
-                                        '#C' => 'bg-emerald-100 text-emerald-700',
-                                        '#O' => 'bg-orange-100 text-orange-700',
-                                    ];
-                                    $oriCls = $oriColors[$route['ori']] ?? 'bg-gray-100 text-gray-600';
-                                @endphp
-                                <tr class="hover:bg-gray-50/60">
-                                    <td class="px-5 py-2.5">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-xs font-bold px-1.5 py-0.5 rounded {{ $oriCls }}">
-                                                {{ $route['ori'] }}
-                                            </span>
-                                            <span class="font-mono text-xs font-medium text-gray-700">
-                                                {{ $route['destination'] }}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td class="px-5 py-2.5 font-mono text-xs text-gray-500">{{ $route['gateway'] }}
-                                    </td>
-                                    <td class="px-5 py-2.5">
-                                        @if (!empty($route['vlan']))
-                                            <span
-                                                class="text-xs font-semibold text-blue-600">{{ $route['vlan'] }}</span>
-                                        @else
-                                            <span class="text-gray-300">—</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="px-5 py-8 text-center text-gray-400 text-sm">Sin rutas
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="sw-collapse-body" data-section-body>
+                    <div class="sw-collapse-inner">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                                    <tr>
+                                        <th class="px-5 py-2.5 text-left">Destino</th>
+                                        <th class="px-5 py-2.5 text-left">Gateway</th>
+                                        <th class="px-5 py-2.5 text-left">VLAN</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    @forelse($switch->ip_routes ?? [] as $route)
+                                        @php
+                                            $oriColors = [
+                                                '#S' => 'bg-blue-100 text-blue-700',
+                                                '#D' => 'bg-violet-100 text-violet-700',
+                                                '#C' => 'bg-emerald-100 text-emerald-700',
+                                                '#O' => 'bg-orange-100 text-orange-700',
+                                            ];
+                                            $oriCls = $oriColors[$route['ori']] ?? 'bg-gray-100 text-gray-600';
+                                        @endphp
+                                        <tr class="hover:bg-gray-50/60">
+                                            <td class="px-5 py-2.5">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="text-xs font-bold px-1.5 py-0.5 rounded {{ $oriCls }}">{{ $route['ori'] }}</span>
+                                                    <span class="font-mono text-xs font-medium text-gray-700">{{ $route['destination'] }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-5 py-2.5 font-mono text-xs text-gray-500">{{ $route['gateway'] }}</td>
+                                            <td class="px-5 py-2.5">
+                                                @if (!empty($route['vlan']))
+                                                    <span class="text-xs font-semibold text-blue-600">{{ $route['vlan'] }}</span>
+                                                @else
+                                                    <span class="text-gray-300">—</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="px-5 py-8 text-center text-gray-400 text-sm">Sin rutas</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {{-- Vecinos EDP --}}
-            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                    <i class="ri-share-circle-line text-emerald-400"></i>
-                    <h3 class="font-semibold text-gray-700 text-sm">Vecinos EDP ({{ $edpCount }})</h3>
+            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden" data-section>
+                <div class="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                    <button type="button" data-section-toggle
+                            class="flex items-center gap-2 select-none cursor-pointer group">
+                        <i class="ri-arrow-right-s-line text-gray-400 text-lg transition-transform duration-200" data-section-chevron></i>
+                        <i class="ri-share-circle-line text-emerald-400"></i>
+                        <h3 class="font-semibold text-gray-700 text-sm group-hover:text-gray-900">Vecinos EDP</h3>
+                        <span class="text-xs bg-emerald-100 text-emerald-700 font-semibold px-2 py-0.5 rounded-full">
+                            {{ $edpCount }}
+                        </span>
+                    </button>
+                    <input type="text" placeholder="Filtrar vecinos…" data-section-search
+                           class="hidden text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600
+                                  placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-indigo-200 w-52">
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
-                            <tr>
-                                <th class="px-5 py-2.5 text-left">Puerto local</th>
-                                <th class="px-5 py-2.5 text-left">Vecino</th>
-                                <th class="px-5 py-2.5 text-right">VLANs</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-50">
-                            @forelse($switch->edp_ports ?? [] as $edp)
-                                <tr class="hover:bg-gray-50/60">
-                                    <td class="px-5 py-2.5">
-                                        <span
-                                            class="font-mono font-bold text-blue-600 text-sm">{{ $edp['port'] }}</span>
-                                    </td>
-                                    <td class="px-5 py-2.5">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                            <span class="font-medium text-gray-700">{{ $edp['neighbor'] }}</span>
-                                        </div>
-                                        @if (!empty($edp['remote_port']))
-                                            <div class="text-xs text-gray-400 ml-3.5 mt-0.5 font-mono">
-                                                Puerto remoto: {{ $edp['remote_port'] }}
-                                            </div>
-                                        @endif
-                                    </td>
-                                    <td class="px-5 py-2.5 text-right">
-                                        <span
-                                            class="text-xs font-semibold text-gray-600">{{ $edp['num_vlans'] }}</span>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="px-5 py-8 text-center text-gray-400 text-sm">Sin vecinos
-                                        EDP</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="sw-collapse-body" data-section-body>
+                    <div class="sw-collapse-inner">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                                    <tr>
+                                        <th class="px-5 py-2.5 text-left">Puerto local</th>
+                                        <th class="px-5 py-2.5 text-left">Vecino</th>
+                                        <th class="px-5 py-2.5 text-right">VLANs</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    @forelse($switch->edp_ports ?? [] as $edp)
+                                        <tr class="hover:bg-gray-50/60">
+                                            <td class="px-5 py-2.5">
+                                                <span class="font-mono font-bold text-blue-600 text-sm">{{ $edp['port'] }}</span>
+                                            </td>
+                                            <td class="px-5 py-2.5">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                                    <span class="font-medium text-gray-700">{{ $edp['neighbor'] }}</span>
+                                                </div>
+                                                @if (!empty($edp['remote_port']))
+                                                    <div class="text-xs text-gray-400 ml-3.5 mt-0.5 font-mono">Puerto remoto: {{ $edp['remote_port'] }}</div>
+                                                @endif
+                                            </td>
+                                            <td class="px-5 py-2.5 text-right">
+                                                <span class="text-xs font-semibold text-gray-600">{{ $edp['num_vlans'] }}</span>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="px-5 py-8 text-center text-gray-400 text-sm">Sin vecinos EDP</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -642,6 +660,69 @@
                 }
             }
         </script>
+    @endpush
+
+    {{-- ── Secciones colapsables: CSS + JS ──────────────────────────────────── --}}
+    @push('js')
+    <style>
+        .sw-collapse-body {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.25s ease;
+        }
+        .sw-collapse-body.open {
+            grid-template-rows: 1fr;
+        }
+        .sw-collapse-inner {
+            overflow: hidden;
+            min-height: 0;
+        }
+    </style>
+    <script>
+    (function () {
+        document.querySelectorAll('[data-section]').forEach(function (section) {
+            var toggle  = section.querySelector('[data-section-toggle]');
+            var body    = section.querySelector('[data-section-body]');
+            var chevron = section.querySelector('[data-section-chevron]');
+            var search  = section.querySelector('[data-section-search]');
+
+            if (!toggle || !body) return;
+
+            // Toggle apertura/cierre
+            toggle.addEventListener('click', function () {
+                var isOpen = body.classList.toggle('open');
+                // Rotar chevron 90° cuando está abierto
+                if (chevron) chevron.style.transform = isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+                // Mostrar/ocultar buscador
+                if (search) {
+                    search.classList.toggle('hidden', !isOpen);
+                    if (!isOpen) {
+                        search.value = '';
+                        filterRows(body, '');
+                    } else {
+                        setTimeout(function () { search.focus(); }, 260);
+                    }
+                }
+            });
+
+            // Filtro en tiempo real
+            if (search) {
+                search.addEventListener('click', function (e) { e.stopPropagation(); });
+                search.addEventListener('input', function () {
+                    filterRows(body, search.value.toLowerCase().trim());
+                });
+            }
+        });
+
+        function filterRows(body, query) {
+            body.querySelectorAll('tbody tr').forEach(function (row) {
+                if (!row.querySelector('td')) return; // fila vacía/cabecera
+                var text = row.textContent.toLowerCase();
+                row.style.display = (query && !text.includes(query)) ? 'none' : '';
+            });
+        }
+    })();
+    </script>
     @endpush
 
 </x-admin-layout>

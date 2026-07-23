@@ -1,20 +1,15 @@
 <x-admin-layout
     title="Topología · {{ $batch->name }} | Diagramas"
-    :breadcrumbs="[
-        ['name' => 'Dashboard',   'href' => route('dashboard')],
-        ['name' => 'Áreas',       'href' => route('admin.areas.index')],
-        ['name' => $client->name, 'href' => route('admin.areas.client', $client)],
-        ['name' => $batch->name,  'href' => route('admin.areas.show', [$client, $batch])],
-        ['name' => 'Topología'],
-    ]">
+    :breadcrumbs="[]">
 
     {{-- Layout full-height: barra superior + dos columnas (diagrama | lista) --}}
-    <div class="flex flex-col -mx-4 sm:-mx-6 lg:-mx-8" style="height: calc(100vh - 130px);">
+    <div class="fixed flex flex-col top-14 left-0 right-0 bottom-0 lg:left-64" style="z-index:10;">
 
         {{-- ── Barra de acciones ── --}}
         <div class="flex items-center justify-between px-5 py-2.5 bg-white border-b border-gray-200 shrink-0 gap-3 flex-wrap">
             <div class="flex items-center gap-2.5 min-w-0">
-                <span class="font-semibold text-gray-700 text-sm truncate">{{ $client->name }}</span>
+                <a href="{{ route('admin.areas.client', $client) }}"
+                   class="font-semibold text-gray-700 text-sm truncate hover:text-indigo-600 hover:underline transition">{{ $client->name }}</a>
                 <svg class="w-3.5 h-3.5 text-gray-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                 </svg>
@@ -70,27 +65,25 @@
             <div class="relative bg-gray-50 border-r border-gray-200 flex-1 min-w-0">
                 <div id="area-network" class="w-full h-full"></div>
 
-                {{-- Leyenda --}}
-                <div class="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur-sm rounded-lg border border-gray-200
-                            shadow-sm px-3 py-2 text-xs text-gray-600 pointer-events-none" style="min-width:150px">
-                    <div class="font-semibold text-gray-700 mb-2">Leyenda</div>
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'core_switch.png') }}"     class="w-5 h-5 object-contain" alt=""> Core</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'backbone_switch.png') }}" class="w-5 h-5 object-contain" alt=""> Backbone</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'dist_switch.png') }}"     class="w-5 h-5 object-contain" alt=""> Distribución</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'access_switch.png') }}"   class="w-5 h-5 object-contain" alt=""> Acceso</div>
-                        <div class="flex items-center gap-2"><img src="{{ route('admin.topology.icon', 'stack_switch.png') }}"    class="w-5 h-5 object-contain" alt=""> Stack</div>
-                        <div class="mt-2 pt-2 border-t border-gray-100 space-y-1">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-5 h-3 shrink-0" viewBox="0 0 20 4">
-                                    <line x1="0" y1="2" x2="20" y2="2" stroke="#F97316" stroke-width="2"
-                                          stroke-dasharray="5,3"/>
-                                </svg>
-                                <span class="text-orange-600 font-medium">Conexión inter-área</span>
-                            </div>
-                            <p class="text-gray-400 leading-tight" style="font-size:9px">
-                                El switch destino pertenece<br>a otro edificio/área
-                            </p>
+                {{-- Leyenda compacta --}}
+                <div class="absolute bottom-3 left-3 z-10 bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200
+                            shadow-sm px-3 py-2 text-xs text-gray-600 pointer-events-none" style="min-width:200px">
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
+                        <div class="col-span-2 font-semibold text-gray-700 mb-1 text-[11px] uppercase tracking-wide">Iconos</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'core_switch.png') }}"     class="w-4 h-4 object-contain" alt=""> Core</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'backbone_switch.png') }}" class="w-4 h-4 object-contain" alt=""> Backbone</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'dist_switch.png') }}"     class="w-4 h-4 object-contain" alt=""> Distribución</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'access_switch.png') }}"   class="w-4 h-4 object-contain" alt=""> Acceso</div>
+                        <div class="flex items-center gap-1.5"><img src="{{ route('admin.topology.icon', 'stack_switch.png') }}"    class="w-4 h-4 object-contain" alt=""> Stack</div>
+                    </div>
+                    <div class="pt-1.5 border-t border-gray-100">
+                        <div class="font-semibold text-gray-700 mb-1 text-[11px] uppercase tracking-wide">Conexiones</div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-block w-6 shrink-0" style="border-top:2px solid #94A3B8"></span> Intra-área
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="inline-block w-6 shrink-0" style="border-top:2.5px dashed #F97316"></span>
+                            <span class="text-orange-600">Inter-área</span>
                         </div>
                     </div>
                 </div>
@@ -164,8 +157,11 @@
                                                 'backbone' => 'backbone_switch.png',
                                                 'dist'     => 'dist_switch.png',
                                                 'access'   => 'access_switch.png',
+                                                'stack'    => 'stack_switch.png',
                                             ];
-                                            $roleIcon = $roleIconMap[$sw['role']] ?? 'access_switch.png';
+                                            $roleIcon = $sw['is_stacked']
+                                                ? 'stack_switch.png'
+                                                : ($roleIconMap[$sw['role']] ?? 'access_switch.png');
                                         @endphp
                                         <img src="{{ route('admin.topology.icon', $roleIcon) }}"
                                              alt="{{ $sw['role'] }}" title="{{ ucfirst($sw['role']) }}"
@@ -255,7 +251,9 @@
             color:  e.is_ghost
                 ? { color: '#F97316', highlight: '#EA580C', hover: '#EA580C' }
                 : (e.color || { color: '#94A3B8', highlight: '#3B82F6', hover: '#3B82F6' }),
-            font:   { size: 8, align: 'middle', color: e.is_ghost ? '#F97316' : '#6B7280', strokeWidth: 0 },
+            font:   e.is_ghost
+                ? { size: 8, align: 'middle', color: '#7c2d12', background: 'white', strokeWidth: 2, strokeColor: 'white' }
+                : { size: 8, align: 'middle', color: '#374151', background: 'white', strokeWidth: 2, strokeColor: 'white' },
             width:  e.is_ghost ? 2 : 1.5,
             smooth: { type: 'dynamic' },
         }));

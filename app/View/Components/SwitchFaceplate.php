@@ -32,6 +32,9 @@ class SwitchFaceplate extends Component
     /** @var array<string,int> conteo por estado (value del enum => n) */
     public array $counts = [];
 
+    /** @var array<int|string, array> puertos normalizados agrupados por slot key */
+    public array $portsBySlot = [];
+
     public function __construct(array $device, Collection|array $ports, ?string $updateUrl = null)
     {
         $this->device    = $device;
@@ -46,6 +49,12 @@ class SwitchFaceplate extends Component
                 $this->counts[$status->value] = $n;
             }
         }
+
+        // Puertos por slot para la tabla lateral de activos
+        $this->portsBySlot = $ports
+            ->groupBy(fn ($p) => $p['slot'] ?? 0)
+            ->map(fn ($sp) => $sp->sortBy('number')->values()->all())
+            ->all();
 
         // Un faceplate por slot (null = standalone)
         $this->slots = $ports

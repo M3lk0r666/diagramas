@@ -60,6 +60,7 @@
 
                             <div class="mt-4">
                                 <a href="{{ route('admin.iso.global', $client) }}"
+                                   target="_blank"
                                    class="flex items-center justify-center gap-2 w-full px-3 py-2
                                           bg-indigo-600 hover:bg-indigo-700 text-white text-sm
                                           font-medium rounded-lg transition-colors">

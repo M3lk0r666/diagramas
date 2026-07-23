@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\IsoTopologyController;
 use App\Http\Controllers\Admin\IsoIndexController;
 use App\Http\Controllers\Admin\IveController;
 use App\Http\Controllers\Admin\ClientHubController;
+use App\Http\Controllers\Admin\InventarioExportController;
 use App\Http\Controllers\Admin\SwitchPortController;
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -25,6 +26,7 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 // Hub de clientes (selector + inventario por cliente)
 Route::get('/clientes/hub', [ClientHubController::class, 'index'])->name('hub.index');
 Route::get('/clientes/hub/{client}/inventario', [ClientHubController::class, 'inventario'])->name('hub.inventario');
+Route::get('/clientes/hub/{client}/inventario/export', [InventarioExportController::class, 'export'])->name('hub.inventario.export');
 
 // Inventario central
 Route::get('/inventario', [InventarioController::class, 'index'])->name('inventario.index');

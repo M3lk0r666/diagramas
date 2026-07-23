@@ -186,62 +186,62 @@
                 </div>
                 <pre id="template-content"
                     class="text-bae font-mono text-gray-100 bg-purple-950 p-5 overflow-x-auto leading-relaxed whitespace-pre">
-                    ! ================================================================
-                    !   Backup de configuración
-                    !   Vendor      : Extreme
-                    !   Host        : &lt;direccion_ip_switch&gt;
-                    !   Hostname    : &lt;nombre_del_host&gt;
-                    !   Fecha       : &lt;YYYY-MM-DD HH:MM:SS&gt;
-                    !   Generado    : Multi-Vendor Backup Tool v1.5.1
-                    ! ================================================================
+! ================================================================
+!   Backup de configuración
+!   Vendor      : Extreme
+!   Host        : &lt;direccion_ip_switch&gt;
+!   Hostname    : &lt;nombre_del_host&gt;
+!   Fecha       : &lt;YYYY-MM-DD HH:MM:SS&gt;
+!   Generado    : Multi-Vendor Backup Tool v1.5.1
+! ================================================================
 
-                    ================================================================
-                    ! show configuration
-                    ================================================================
+================================================================
+! show configuration
+================================================================
 
-                    &lt;Pegar aquí la salida de: show configuration&gt;
+&lt;Pegar aquí la salida de: show configuration&gt;
 
-                    ================================================================
-                    ! show version detail
-                    ================================================================
+================================================================
+! show version detail
+================================================================
 
-                    &lt;Pegar aquí la salida de: show version detail&gt;
+&lt;Pegar aquí la salida de: show version detail&gt;
 
-                    ================================================================
-                    ! show switch detail
-                    ================================================================
+================================================================
+! show switch detail
+================================================================
 
-                    &lt;Pegar aquí la salida de: show switch detail&gt;
+&lt;Pegar aquí la salida de: show switch detail&gt;
 
-                    ================================================================
-                    ! show vlan
-                    ================================================================
+================================================================
+! show vlan
+================================================================
 
-                    &lt;Pegar aquí la salida de: show vlan&gt;
+&lt;Pegar aquí la salida de: show vlan&gt;
 
-                    ================================================================
-                    ! show iproute
-                    ================================================================
+================================================================
+! show iproute
+================================================================
 
-                    &lt;Pegar aquí la salida de: show iproute&gt;
+&lt;Pegar aquí la salida de: show iproute&gt;
 
-                    ================================================================
-                    ! show edp ports all
-                    ================================================================
+================================================================
+! show edp ports all
+================================================================
 
-                    &lt;Pegar aquí la salida de: show edp ports all&gt;
+&lt;Pegar aquí la salida de: show edp ports all&gt;
 
-                    ================================================================
-                    ! show ports no-refresh
-                    ================================================================
+================================================================
+! show ports no-refresh
+================================================================
 
-                    &lt;Pegar aquí la salida de: show ports no-refresh&gt;
+&lt;Pegar aquí la salida de: show ports no-refresh&gt;
 
-                    ================================================================
-                    ! show stacking
-                    ================================================================
+================================================================
+! show stacking
+================================================================
 
-                    &lt;Pegar aquí la salida de: show stacking&gt;
+&lt;Pegar aquí la salida de: show stacking&gt;
                 </pre>
             </div>
 

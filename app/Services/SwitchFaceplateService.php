@@ -19,13 +19,29 @@ class SwitchFaceplateService
 {
     public function device(Switche $switch): array
     {
+        $members = [];
+        if ($switch->is_stacked && !empty($switch->stack_members)) {
+            $members = collect($switch->stack_members)
+                ->sortBy('slot')
+                ->map(fn ($m) => [
+                    'slot'   => $m['slot']           ?? '?',
+                    'serial' => $m['serial_number']  ?? '—',
+                    'mac'    => $m['mac']             ?? '—',
+                    'role'   => $m['role']            ?? null,
+                    'state'  => $m['stack_state']     ?? null,
+                ])
+                ->values()
+                ->all();
+        }
+
         return [
-            'ip'       => $switch->management_ip ?? '—',
-            'mac'      => $switch->system_mac ?? '—',
+            'ip'       => $switch->management_ip  ?? '—',
+            'mac'      => $switch->system_mac      ?? '—',
             'software' => $switch->firmware_version ?? '—',
-            'model'    => $switch->system_type ?? '—',
-            'serial'   => $switch->serial_number ?? '—',
+            'model'    => $switch->system_type     ?? '—',
+            'serial'   => $switch->serial_number   ?? '—',
             'make'     => 'EXOS',
+            'members'  => $members,
         ];
     }
 

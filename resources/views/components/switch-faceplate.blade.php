@@ -68,106 +68,197 @@
      data-csrf="{{ csrf_token() }}">
 
     {{-- ── BARRA DE EQUIPO ─────────────────────────────────────────── --}}
-    <div class="bg-white border border-gray-200 rounded-xl px-4 py-2.5 flex flex-wrap gap-x-7 gap-y-2 text-xs">
-        @foreach ([
-            'IP Address'       => $device['ip']       ?? '—',
-            'MAC Address'      => $device['mac']      ?? '—',
-            'Software Version' => $device['software'] ?? '—',
-            'Model'            => $device['model']    ?? '—',
-            'Serial #'         => $device['serial']   ?? '—',
-            'Make'             => $device['make']     ?? '—',
-        ] as $label => $value)
-            <div class="shrink-0">
-                <b class="block text-gray-800">{{ $label }}:</b>
-                <span class="text-gray-500 font-mono">{{ $value }}</span>
-            </div>
-        @endforeach
-    </div>
+    {{-- Switch standalone: barra única global --}}
+    @if (empty($device['members']))
+        <div class="bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5 flex flex-wrap gap-x-7 gap-y-2 text-xs">
+            @foreach ([
+                'IP Address'       => $device['ip']       ?? '—',
+                'MAC Address'      => $device['mac']      ?? '—',
+                'Software Version' => $device['software'] ?? '—',
+                'Model'            => $device['model']    ?? '—',
+                'Serial #'         => $device['serial']   ?? '—',
+                'Make'             => $device['make']     ?? '—',
+            ] as $label => $value)
+                <div class="shrink-0">
+                    <b class="block text-violet-800">{{ $label }}:</b>
+                    <span class="text-violet-600 font-mono">{{ $value }}</span>
+                </div>
+            @endforeach
+        </div>
+    @endif
 
     {{-- ── FACEPLATE(S): uno por slot ──────────────────────────────── --}}
     @foreach ($slots as $slot)
-        {{-- Panel unificado: RJ45 + SFP en una sola tarjeta, sin gap interior --}}
-        <div class="bg-white border border-gray-200 rounded-xl p-4 pb-5 w-full min-w-0">
+        @php
+            $slotKey     = $slot['slot'] ?? 0;
+            $activePorts = collect($portsBySlot[$slotKey] ?? [])
+                ->filter(fn ($p) => $p['status'] === \App\Enums\PortStatus::Active)
+                ->values();
+            $m = !empty($device['members'])
+                ? collect($device['members'])->firstWhere('slot', $slot['slot'])
+                : null;
+        @endphp
 
-            {{-- Título del slot --}}
-            <div class="flex items-center gap-2 mb-3 text-sm">
-                <span class="font-bold text-gray-800">{{ $device['model'] ?? 'Switch' }}</span>
-                @if ($slot['label'])
-                    <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
-                        {{ $slot['label'] }}
-                    </span>
-                @endif
-            </div>
+        {{-- Wrapper por slot: [columna izquierda: info bar + faceplate] [columna derecha: tabla] --}}
+        <div class="flex items-stretch gap-4">
 
-            <div class="flex gap-6 min-w-0">
+            {{-- ── COLUMNA IZQUIERDA: info bar + faceplate ──────────── --}}
+            <div class="shrink-0 flex flex-col gap-2">
 
-                {{-- Columna Mgmt / Console --}}
-                <div class="flex flex-col gap-3.5 items-center pt-[18px] shrink-0">
-                    <div>
-                        <div class="text-[11px] text-gray-500 text-center mb-0.5">Mgmt</div>
-                        <div class="sw-jack sw-plain">&nbsp;</div>
-                    </div>
-                    <div>
-                        <div class="text-[11px] text-gray-500 text-center mb-0.5">Console</div>
-                        <div class="sw-jack sw-plain sw-flip">&nbsp;</div>
-                    </div>
-                </div>
-
-                {{-- Puertos RJ45 + SFP en la misma fila: RJ45 compactos, SFP anclado a la derecha --}}
-                <div class="flex gap-6 items-start flex-1 min-w-0 overflow-x-auto px-0.5 pt-1 pb-2.5">
-
-                    {{-- Bloques RJ45 --}}
-                    @forelse ($slot['blocks'] as $block)
-                        <div class="flex gap-2 shrink-0">
-                            @foreach ($block as $col)
-                                <div class="flex flex-col items-center gap-1 shrink-0">
-                                    <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
-                                    @if ($col['top'])
-                                        <x-switch-faceplate-jack :port="$col['top']" />
-                                    @else
-                                        <div class="w-[34px] h-[32px] shrink-0"></div>
-                                    @endif
-                                    @if ($col['bottom'])
-                                        <x-switch-faceplate-jack :port="$col['bottom']" flip />
-                                    @else
-                                        <div class="w-[34px] h-[32px] shrink-0"></div>
-                                    @endif
-                                    <div class="sw-num">{{ $col['bottom']['number'] ?? '' }}</div>
-                                </div>
-                            @endforeach
+                {{-- Barra violet (solo stacks) --}}
+                @if ($m)
+                <div class="bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5 flex flex-wrap gap-x-7 gap-y-2 text-xs">
+                    @foreach ([
+                        'IP Address'       => $device['ip']       ?? '—',
+                        'MAC Address'      => $m['mac']            ?? '—',
+                        'Software Version' => $device['software'] ?? '—',
+                        'Model'            => $device['model']    ?? '—',
+                        'Serial #'         => $m['serial']         ?? '—',
+                        'Make'             => $device['make']     ?? '—',
+                    ] as $label => $value)
+                        <div class="shrink-0">
+                            <b class="block text-violet-800">{{ $label }}:</b>
+                            <span class="text-violet-600 font-mono">{{ $value }}</span>
                         </div>
-                    @empty
-                        <p class="text-xs text-gray-400 italic self-center">Sin puertos RJ45 en este slot</p>
-                    @endforelse
-
-                    {{-- Sección SFP+: anclada al extremo derecho con ml-auto --}}
-                    @if (count($slot['sfp']))
-                        <div class="shrink-0 border-l border-gray-300 pl-5 ml-auto flex flex-col">
-                            <span class="inline-block border border-gray-300 rounded text-[10px] text-gray-500 px-2 py-0.5 mb-2 self-start">
-                                10GbE SFP+
-                            </span>
-                            <div class="flex gap-2">
-                                @foreach ($slot['sfp'] as $col)
-                                    <div class="flex flex-col items-center gap-1 shrink-0">
-                                        <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
-                                        @if ($col['top'])
-                                            <x-switch-faceplate-jack :port="$col['top']" />
-                                        @endif
-                                        @if ($col['bottom'])
-                                            <x-switch-faceplate-jack :port="$col['bottom']" flip />
-                                        @else
-                                            <div class="w-[34px] h-[32px] shrink-0"></div>
-                                        @endif
-                                        <div class="sw-num">{{ $col['bottom']['number'] ?? '' }}</div>
-                                    </div>
-                                @endforeach
-                            </div>
+                    @endforeach
+                    @if (!empty($m['role']) || !empty($m['state']))
+                        <div class="shrink-0 ml-auto self-center text-right">
+                            @if (!empty($m['role']))<div class="text-violet-700 font-semibold">{{ $m['role'] }}</div>@endif
+                            @if (!empty($m['state']))<div class="text-violet-400">{{ $m['state'] }}</div>@endif
                         </div>
                     @endif
+                </div>
+                @endif
 
+                {{-- Faceplate card (solo puertos) --}}
+                <div class="bg-white border border-gray-200 rounded-xl p-4 pb-5 flex-1">
+
+                    {{-- Título del slot --}}
+                    <div class="flex items-center gap-2 mb-3 text-sm">
+                        <span class="font-bold text-gray-800">{{ $device['model'] ?? 'Switch' }}</span>
+                        @if ($slot['label'])
+                            <span class="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
+                                {{ $slot['label'] }}
+                            </span>
+                        @endif
+                    </div>
+
+                    {{-- Ports row: Mgmt/Console + RJ45 + SFP --}}
+                    <div class="flex gap-6 min-w-0 overflow-x-auto">
+
+                        {{-- Columna Mgmt / Console --}}
+                        <div class="flex flex-col gap-3.5 items-center pt-[18px] shrink-0">
+                            <div>
+                                <div class="text-[11px] text-gray-500 text-center mb-0.5">Mgmt</div>
+                                <div class="sw-jack sw-plain">&nbsp;</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-gray-500 text-center mb-0.5">Console</div>
+                                <div class="sw-jack sw-plain sw-flip">&nbsp;</div>
+                            </div>
+                        </div>
+
+                        {{-- Bloques RJ45 + SFP --}}
+                        <div class="flex gap-6 items-start px-0.5 pt-1 pb-2.5">
+
+                            @forelse ($slot['blocks'] as $block)
+                                <div class="flex gap-2 shrink-0">
+                                    @foreach ($block as $col)
+                                        <div class="flex flex-col items-center gap-1 shrink-0">
+                                            <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
+                                            @if ($col['top'])
+                                                <x-switch-faceplate-jack :port="$col['top']" />
+                                            @else
+                                                <div class="w-[34px] h-[32px] shrink-0"></div>
+                                            @endif
+                                            @if ($col['bottom'])
+                                                <x-switch-faceplate-jack :port="$col['bottom']" flip />
+                                            @else
+                                                <div class="w-[34px] h-[32px] shrink-0"></div>
+                                            @endif
+                                            <div class="sw-num">{{ $col['bottom']['number'] ?? '' }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @empty
+                                <p class="text-xs text-gray-400 italic self-center">Sin puertos RJ45 en este slot</p>
+                            @endforelse
+
+                            {{-- SFP+: pegado a los RJ45 --}}
+                            @if (count($slot['sfp']))
+                                <div class="shrink-0 border-l border-gray-300 pl-5 flex flex-col">
+                                    <span class="inline-block border border-gray-300 rounded text-[10px] text-gray-500 px-2 py-0.5 mb-2 self-start">
+                                        10GbE SFP+
+                                    </span>
+                                    <div class="flex gap-2">
+                                        @foreach ($slot['sfp'] as $col)
+                                            <div class="flex flex-col items-center gap-1 shrink-0">
+                                                <div class="sw-num">{{ $col['top']['number'] ?? '' }}</div>
+                                                @if ($col['top'])
+                                                    <x-switch-faceplate-jack :port="$col['top']" />
+                                                @endif
+                                                @if ($col['bottom'])
+                                                    <x-switch-faceplate-jack :port="$col['bottom']" flip />
+                                                @else
+                                                    <div class="w-[34px] h-[32px] shrink-0"></div>
+                                                @endif
+                                                <div class="sw-num">{{ $col['bottom']['number'] ?? '' }}</div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                        </div>
+                    </div>
+                </div>
+            </div>{{-- fin columna izquierda --}}
+
+            {{-- ── COLUMNA DERECHA: tabla puertos activos ───────────── --}}
+            @if ($activePorts->isNotEmpty())
+            <div class="flex-1 min-w-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col">
+                <p class="text-xs font-semibold text-gray-500 mb-3">
+                    Puertos Activos
+                    <span class="text-gray-300 font-normal ml-1">({{ $activePorts->count() }})</span>
+                </p>
+                <div data-sw-table class="flex flex-col flex-1 min-h-0">
+                    <table class="w-full text-xs border-collapse">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-100 text-left">
+                                <th class="pb-2 font-semibold pr-3">Puerto</th>
+                                <th class="pb-2 font-semibold pr-3">Descripción</th>
+                                <th class="pb-2 font-semibold pr-3">VLAN</th>
+                                <th class="pb-2 font-semibold pr-3">Estado Puerto</th>
+                                <th class="pb-2 font-semibold pr-3">Estado Link</th>
+                                <th class="pb-2 font-semibold pr-3">Velocidad</th>
+                                <th class="pb-2 font-semibold">Dúplex</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @foreach ($activePorts as $ap)
+                            <tr data-port-id="{{ $ap['id'] }}" class="hover:bg-gray-50 transition-colors">
+                                <td class="py-1.5 pr-3 font-mono text-gray-700 whitespace-nowrap">{{ $ap['id'] }}</td>
+                                <td class="py-1.5 pr-3 text-gray-600">
+                                    <span data-desc-cell class="block truncate max-w-[200px]"
+                                          title="{{ $ap['description'] }}">
+                                        {{ $ap['description'] ?: '—' }}
+                                    </span>
+                                </td>
+                                <td class="py-1.5 pr-3 text-gray-500">{{ $ap['vlan'] ?: '—' }}</td>
+                                <td class="py-1.5 pr-3 text-gray-500">E</td>
+                                <td class="py-1.5 pr-3 text-gray-500">A</td>
+                                <td class="py-1.5 pr-3 text-gray-500 whitespace-nowrap">{{ $ap['speed'] ?: '—' }}</td>
+                                <td class="py-1.5 text-gray-500">{{ $ap['duplex'] ?: '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                    {{-- Controles de paginación: el JS los inserta aquí si hay > 8 filas --}}
                 </div>
             </div>
-        </div>
+            @endif
+
+        </div>{{-- fin wrapper slot --}}
     @endforeach
 
     {{-- ── LEYENDA + RESUMEN ───────────────────────────────────────── --}}
@@ -246,11 +337,54 @@
             (function () {
                 'use strict';
 
-                const POP_W = 320;
+                const POP_W    = 320;
+                const PAGE_SIZE = 6;
 
                 document.querySelectorAll('[data-sw-faceplate]').forEach(initFaceplate);
 
+                // ── Paginación de tabla de puertos activos ──────────────────
+                function initTable(tableWrapper) {
+                    const tbody = tableWrapper.querySelector('tbody');
+                    if (!tbody) return;
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    if (rows.length <= PAGE_SIZE) return; // sin paginación si cabe todo
+
+                    let page = 0;
+                    const totalPages = Math.ceil(rows.length / PAGE_SIZE);
+
+                    // Controles de paginación
+                    const pager = document.createElement('div');
+                    pager.className = 'flex items-center justify-between pt-2 mt-1 border-t border-gray-100 text-[11px] text-gray-400 select-none';
+                    pager.innerHTML =
+                        '<button data-sw-prev class="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition">‹ Ant</button>' +
+                        '<span data-sw-page class="font-mono"></span>' +
+                        '<button data-sw-next class="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition">Sig ›</button>';
+                    tableWrapper.appendChild(pager);
+
+                    const prevBtn  = pager.querySelector('[data-sw-prev]');
+                    const nextBtn  = pager.querySelector('[data-sw-next]');
+                    const pageInfo = pager.querySelector('[data-sw-page]');
+
+                    function render() {
+                        const start = page * PAGE_SIZE;
+                        const end   = start + PAGE_SIZE;
+                        rows.forEach(function (row, i) {
+                            row.hidden = (i < start || i >= end);
+                        });
+                        pageInfo.textContent = (page + 1) + ' / ' + totalPages;
+                        prevBtn.disabled = page === 0;
+                        nextBtn.disabled = page === totalPages - 1;
+                    }
+
+                    prevBtn.addEventListener('click', function () { if (page > 0) { page--; render(); } });
+                    nextBtn.addEventListener('click', function () { if (page < totalPages - 1) { page++; render(); } });
+                    render();
+                }
+
                 function initFaceplate(root) {
+                    // Inicializar paginación en cada tabla de puertos activos
+                    root.querySelectorAll('[data-sw-table]').forEach(initTable);
+
                     const popover   = root.querySelector('[data-sw-popover]');
                     const minipop   = root.querySelector('[data-sw-minipop]');
                     const descInput = popover.querySelector('[data-sw-desc]');
@@ -412,6 +546,17 @@
                             selectedJack.dataset.desc = newDesc;
                             resetDescField(newDesc);
                             showMsg('Descripción guardada.', false);
+
+                            // ── Actualizar celda de descripción en la tabla sin recargar ──
+                            const portId  = selectedJack.dataset.id;
+                            const tableRow = root.querySelector('[data-port-id="' + portId + '"]');
+                            if (tableRow) {
+                                const cell = tableRow.querySelector('[data-desc-cell]');
+                                if (cell) {
+                                    cell.textContent = newDesc || '—';
+                                    cell.title       = newDesc || '';
+                                }
+                            }
                         } catch (err) {
                             saveBtn.disabled = false;
                             saveBtn.textContent = 'Aceptar';

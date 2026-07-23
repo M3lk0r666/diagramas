@@ -20,44 +20,101 @@
     <div class="max-w-7xl mx-auto py-6 px-4 space-y-6">
 
         {{-- ── INFO HEADER ─────────────────────────────────────── --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-6 py-4 text-sm">
-            <div class="flex flex-wrap items-stretch gap-0 divide-x divide-gray-200 dark:divide-gray-700">
-                @if($switch->system_type)
-                    <div class="pr-6 mr-6 first:pl-0">
-                        <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Modelo</p>
-                        <p class="font-semibold text-gray-800 dark:text-gray-100">{{ $switch->system_type }}</p>
+        @if($isStacked)
+            {{-- Stack: una tarjeta por slot --}}
+            @php $members = collect($switch->stack_members ?? [])->sortBy('slot'); @endphp
+            <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(340px, 1fr))">
+                @foreach($members as $m)
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-5 py-4 text-sm">
+                    {{-- Cabecera de slot --}}
+                    <div class="flex items-center gap-2 mb-3 pb-2.5 border-b border-gray-100 dark:border-gray-700">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold">
+                            <i class="ri-stack-line text-sm"></i> Slot {{ $m['slot'] ?? '?' }}
+                        </span>
+                        @if(!empty($m['stack_state']))
+                            <span class="text-xs text-gray-400 font-medium">{{ $m['stack_state'] }}</span>
+                        @endif
+                        @if(!empty($m['role']))
+                            <span class="ml-auto text-xs text-gray-400 italic">{{ $m['role'] }}</span>
+                        @endif
                     </div>
-                @endif
-                @if($switch->serial_number)
-                    <div class="px-6">
-                        <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Serie</p>
-                        <p class="font-mono text-gray-700 dark:text-gray-200">{{ $switch->serial_number }}</p>
+                    {{-- Datos del slot --}}
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                        @if($switch->management_ip)
+                        <div>
+                            <p class="text-gray-400 text-[10px] uppercase tracking-wide font-medium mb-0.5">IP Gestión</p>
+                            <p class="font-mono font-semibold text-blue-700 dark:text-blue-400 text-xs">{{ $switch->management_ip }}</p>
+                        </div>
+                        @endif
+                        @if($switch->system_type)
+                        <div>
+                            <p class="text-gray-400 text-[10px] uppercase tracking-wide font-medium mb-0.5">Modelo</p>
+                            <p class="font-semibold text-gray-800 dark:text-gray-100 text-xs">{{ $switch->system_type }}</p>
+                        </div>
+                        @endif
+                        @if(!empty($m['mac']))
+                        <div>
+                            <p class="text-gray-400 text-[10px] uppercase tracking-wide font-medium mb-0.5">MAC</p>
+                            <p class="font-mono text-gray-700 dark:text-gray-200 text-xs">{{ $m['mac'] }}</p>
+                        </div>
+                        @endif
+                        @if(!empty($m['serial_number']))
+                        <div>
+                            <p class="text-gray-400 text-[10px] uppercase tracking-wide font-medium mb-0.5">Serie</p>
+                            <p class="font-mono text-gray-700 dark:text-gray-200 text-xs">{{ $m['serial_number'] }}</p>
+                        </div>
+                        @endif
+                        @if($switch->firmware_version)
+                        <div class="col-span-2">
+                            <p class="text-gray-400 text-[10px] uppercase tracking-wide font-medium mb-0.5">Firmware</p>
+                            <p class="font-mono text-gray-700 dark:text-gray-200 text-xs">{{ $switch->firmware_version }}</p>
+                        </div>
+                        @endif
                     </div>
-                @endif
-                @if($switch->system_mac)
-                    <div class="px-6">
-                        <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">MAC</p>
-                        <p class="font-mono text-gray-700 dark:text-gray-200">{{ $switch->system_mac }}</p>
+                </div>
+                @endforeach
+            </div>
+        @else
+            {{-- Switch standalone: barra única --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-6 py-4 text-sm">
+                <div class="flex flex-wrap items-stretch gap-0 divide-x divide-gray-200 dark:divide-gray-700">
+                    @if($switch->system_type)
+                        <div class="pr-6 mr-6 first:pl-0">
+                            <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Modelo</p>
+                            <p class="font-semibold text-gray-800 dark:text-gray-100">{{ $switch->system_type }}</p>
+                        </div>
+                    @endif
+                    @if($switch->serial_number)
+                        <div class="px-6">
+                            <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Serie</p>
+                            <p class="font-mono text-gray-700 dark:text-gray-200">{{ $switch->serial_number }}</p>
+                        </div>
+                    @endif
+                    @if($switch->system_mac)
+                        <div class="px-6">
+                            <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">MAC</p>
+                            <p class="font-mono text-gray-700 dark:text-gray-200">{{ $switch->system_mac }}</p>
+                        </div>
+                    @endif
+                    @if($switch->management_ip)
+                        <div class="px-6">
+                            <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">IP Gestión</p>
+                            <p class="font-mono font-semibold text-blue-700 dark:text-blue-400">{{ $switch->management_ip }}</p>
+                        </div>
+                    @endif
+                    @if($switch->firmware_version)
+                        <div class="px-6">
+                            <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Firmware</p>
+                            <p class="font-mono text-gray-700 dark:text-gray-200">{{ $switch->firmware_version }}</p>
+                        </div>
+                    @endif
+                    <div class="pl-6 ml-auto text-right self-center">
+                        <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Puertos activos</p>
+                        <p class="font-semibold text-gray-800 dark:text-gray-100 text-lg">{{ count($switch->active_ports ?? []) }}</p>
                     </div>
-                @endif
-                @if($switch->management_ip)
-                    <div class="px-6">
-                        <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">IP Gestión</p>
-                        <p class="font-mono font-semibold text-blue-700 dark:text-blue-400">{{ $switch->management_ip }}</p>
-                    </div>
-                @endif
-                @if($switch->firmware_version)
-                    <div class="px-6">
-                        <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Firmware</p>
-                        <p class="font-mono text-gray-700 dark:text-gray-200">{{ $switch->firmware_version }}</p>
-                    </div>
-                @endif
-                <div class="pl-6 ml-auto text-right self-center">
-                    <p class="text-gray-400 text-xs uppercase tracking-wide font-medium mb-1">Puertos activos</p>
-                    <p class="font-semibold text-gray-800 dark:text-gray-100 text-lg">{{ count($switch->active_ports ?? []) }}</p>
                 </div>
             </div>
-        </div>
+        @endif
 
         {{-- ── GRAFO DE PUERTOS ─────────────────────────────────── --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
