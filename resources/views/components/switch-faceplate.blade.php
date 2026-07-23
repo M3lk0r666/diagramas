@@ -100,7 +100,7 @@
         @endphp
 
         {{-- Wrapper por slot: [columna izquierda: info bar + faceplate] [columna derecha: tabla] --}}
-        <div class="flex items-stretch gap-4">
+        <div class="flex flex-wrap items-start gap-4">
 
             {{-- ── COLUMNA IZQUIERDA: info bar + faceplate ──────────── --}}
             <div class="shrink-0 flex flex-col gap-2">
@@ -121,10 +121,10 @@
                             <span class="text-violet-600 font-mono">{{ $value }}</span>
                         </div>
                     @endforeach
-                    @if (!empty($m['role']) || !empty($m['state']))
+                    @if (!empty($m['role']) || !empty($m['stack_state']))
                         <div class="shrink-0 ml-auto self-center text-right">
                             @if (!empty($m['role']))<div class="text-violet-700 font-semibold">{{ $m['role'] }}</div>@endif
-                            @if (!empty($m['state']))<div class="text-violet-400">{{ $m['state'] }}</div>@endif
+                            @if (!empty($m['stack_state']))<div class="text-violet-400">{{ $m['stack_state'] }}</div>@endif
                         </div>
                     @endif
                 </div>
@@ -216,7 +216,7 @@
 
             {{-- ── COLUMNA DERECHA: tabla puertos activos ───────────── --}}
             @if ($activePorts->isNotEmpty())
-            <div class="flex-1 min-w-0 bg-white border border-gray-200 rounded-xl p-4 flex flex-col">
+            <div class="flex-1 bg-white border border-gray-200 rounded-xl p-4 flex flex-col" style="min-width:280px">
                 <p class="text-xs font-semibold text-gray-500 mb-3">
                     Puertos Activos
                     <span class="text-gray-300 font-normal ml-1">({{ $activePorts->count() }})</span>
